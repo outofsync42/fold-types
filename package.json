@@ -1,0 +1,84 @@
+{
+  "name": "fold-type",
+  "displayName": "Type Folding",
+  "description": "Fold on types (class, methods, etc..) instead of levels",
+  "version": "1.0.0",
+  "publisher": "outofsync42",
+	"license": "MIT",
+  "engines": {
+    "vscode": "^1.67.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:fold-type.fold-all",
+    "onCommand:fold-type.fold-parent",
+    "onCommand:fold-type.fold-children",
+    "onCommand:fold-type.unfold-parent"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "fold-type.fold-all",
+        "title": "Fold Types All"
+      },
+      {
+        "command": "fold-type.fold-parent",
+        "title": "Fold Types Parent"
+      },
+      {
+        "command": "fold-type.fold-children",
+        "title": "Fold Types Children"
+      },
+      {
+        "command": "fold-type.unfold-parent",
+        "title": "Fold Types Parent"
+      }
+    ],
+    "configuration": {
+			"type": "object",
+			"title": "Fold Types Configuration",
+			"properties": {
+				"fold-type.class": {
+					"type": "bool",
+					"default": true,
+					"description": "Fold Classes"
+				},
+        "fold-type.method": {
+					"type": "bool",
+					"default": true,
+					"description": "Fold Methods"
+				},
+        "fold-type.object": {
+					"type": "bool",
+					"default": true,
+					"description": "Fold Objects"
+				},
+        "fold-type.array": {
+					"type": "bool",
+					"default": true,
+					"description": "Fold Arrays"
+				},
+        "fold-type.while": {
+					"type": "bool",
+					"default": false,
+					"description": "Fold While/DoWhile"
+				}
+			}
+		}
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "eslint": "^5.3.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-import": "^2.17.2",
+    "mocha": "^2.3.3",
+    "vscode": "^1.0.0"
+  }
+}
