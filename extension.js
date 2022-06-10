@@ -117,6 +117,44 @@ function array_column(array, columnName) {
 	}
 	return list;
 }
+function trim(str, charlist) {
+
+	if (str === null) {
+		return '';
+	}
+
+	var whitespace, l = 0,
+		i = 0;
+	str += '';
+
+	if (!charlist) {
+		// default list
+		whitespace =
+			' \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000';
+	} else {
+		// preg_quote custom list
+		charlist += '';
+		whitespace = charlist.replace(/([\[\]\(\)\.\?\/\*\{\}\+\$\^\:])/g, '$1');
+	}
+
+	l = str.length;
+	for (i = 0; i < l; i++) {
+		if (whitespace.indexOf(str.charAt(i)) === -1) {
+			str = str.substring(i);
+			break;
+		}
+	}
+
+	l = str.length;
+	for (i = l - 1; i >= 0; i--) {
+		if (whitespace.indexOf(str.charAt(i)) === -1) {
+			str = str.substring(0, i + 1);
+			break;
+		}
+	}
+
+	return whitespace.indexOf(str.charAt(0)) === -1 ? str : '';
+}
 function str_replace(find, replace, text) {
 
 	if (find !== replace && isset(replace)) {
@@ -168,6 +206,7 @@ function length(object) {
 
 	return x;
 }
+
 var debug = console.log;
 
 //application
@@ -243,6 +282,9 @@ var application = new function () {
 		}
 		return cache.documentType;
 	}
+	this.documentLineCount = function () {
+		return this.document().lineCount;
+	}
 
 	//actions
 	this.executeCommand = async function (command) {
@@ -266,14 +308,16 @@ var application = new function () {
 //extenstion
 var SmartFold = function () {
 
+	var self = this;
+
 	//private vars
-	var cache = {};
-	var in_block_comment = false;
+	let cache = {};
 
 	//helpers
 	function strip_non_code(line) {
 		var newLine = "";
 		var x = 0;
+		var in_quote_str = false;
 		var in_single_quote_str = false;
 		var in_double_quote_str = false;
 		var in_block_comment_start = false;
@@ -292,9 +336,9 @@ var SmartFold = function () {
 				}
 			}
 
-			if (in_block_comment) {
+			if (is_true(cache.in_block_comment)) {
 				if (in_block_comment_end && line[x] == '/') {
-					in_block_comment = false;
+					cache.in_block_comment = false;
 				} else if (line[x] == '*') {
 					in_block_comment_end = true;
 					x++;
@@ -306,18 +350,23 @@ var SmartFold = function () {
 				}
 			}
 
-			if (in_double_quote_str == false) {
+			if (in_double_quote_str == false && in_single_quote_str == false) {
+				if (line[x] == "`" && line[x - 1] != "\\") {
+					in_quote_str = !in_quote_str;
+				}
+			}
+			if (in_double_quote_str == false && in_quote_str == false) {
 				if (line[x] == "'" && line[x - 1] != "\\") {
 					in_single_quote_str = !in_single_quote_str;
 				}
 			}
-			if (in_single_quote_str == false) {
+			if (in_single_quote_str == false && in_quote_str == false) {
 				if (line[x] == '"' && line[x - 1] != "\\") {
 					in_double_quote_str = !in_double_quote_str;
 				}
 			}
 
-			if (in_double_quote_str || in_single_quote_str) {
+			if (in_double_quote_str || in_single_quote_str || in_quote_str) {
 				x++;
 				continue;
 			}
@@ -332,14 +381,14 @@ var SmartFold = function () {
 			}
 
 			if (in_block_comment_start && line[x] == "*") {
-				in_block_comment = true;
+				cache.in_block_comment = true;
 			} else if (line[x] == "/") {
 				in_block_comment_start = true;
 			} else {
 				in_block_comment_start = false;
 			}
 
-			if (in_line_comment == true || in_block_comment == true) {
+			if (in_line_comment == true || cache.in_block_comment == true) {
 				return newLine; //return what ever came before the comment
 			}
 
@@ -349,143 +398,208 @@ var SmartFold = function () {
 		return newLine;
 	}
 
-	//data
-	function documentLines() {
-		if (isset(cache.documentLines) == false) {
-			var lines = application.documentLines();
-			cache.documentLines = [];
-			for (var i in lines) {
-				cache.documentLines.push(strip_non_code(str_replace("\t", " ", lines[i])));
-			}
-		}
-		return cache.documentLines;
+	//config data
+	function getConfigurationSetting(key, default_value) {
+		var value = vscode.workspace.getConfiguration('fold-type').get(key);
+		return isset(value) ? value : default_value;
 	}
 
 	//methods
-	function isFoldLine(lines, i) {
+	function getEnabledFoldTypes() {
+		if (isset(cache.enabledTypes) == false) {
+			cache.foldtypes = {
+				'class': { enabled: getConfigurationSetting('class', true) },
+				'method': { enabled: getConfigurationSetting('method', true) },
+				'object': { enabled: getConfigurationSetting('object', true) },
+				'array': { enabled: getConfigurationSetting('array', true) },
+				'while': { enabled: getConfigurationSetting('while', true) },
+				'if': { enabled: getConfigurationSetting('if', true) },
+			};
+		}
+		return cache.foldtypes;
+	}
+	function getLineInfo(line) {
 
-		var curr_line = lines[parseInt(i)];
+		var text = line['text'];
+		var lineNum = line['line'];
+		var lines = getDocumentLines();
 
-		var checkFold = {
-			method: [],
-			object: [],
-			array: [],
-			while: [],
-			if: [],
-		};
+		var fileType = application.documentType();
 
-		var preventFold = {
-			method: [],
-			object: [],
-			array: [],
-			while: [],
-			if: [],
+		line['syntax'] = 'any';
+		if (fileType == 'js') {
+			line['syntax'] = 'js';
 		}
 
-		var keyWords = {
-			method: ['function'],
-			while: ['while', 'do'],
-			if: ['if', 'else']
+		var foldTypes = getEnabledFoldTypes();
+		var checkType = {};
+		for (var type in foldTypes) {
+			checkType[type] = [];
 		}
 
-		var check_line = curr_line.toLowerCase();
+		var preventType = {
+			while: [],
+		}
 
+		var keyWords = [
+			'class',
+			'function',
+			'constructor',
+			'while',
+			'do',
+			'if'
+		];
+
+		//--------------------------------
+		//classes
+		checkType.class.push(text.lastIndexOf(" class "));
+		checkType.class = checkType.class.filter(function (item) {
+			return item !== -1; // remove un needed
+		})
+
+		//--------------------------------
 		//method
-		checkFold.method.push(check_line.lastIndexOf("function "));
-		checkFold.method.push(check_line.lastIndexOf("function("));
-		if (application.documentType() == 'js') {
-			checkFold.method.push(check_line.lastIndexOf("=> {"));
-			checkFold.method.push(check_line.lastIndexOf("=>{"));
+		if (line['syntax'] == 'js') {
+			//only for JS
+			if (checkType.class.length > 0) {
+				cache.in_class = true;
+			}
+			if (is_true(cache.in_class)) {
+				var b = (text.match(/\{/g) || []).length;
+				cache.in_class_brace_count = isset(cache.in_class_brace_count) == false && b > 0 ? b : (cache.in_class_brace_count + b);
+				cache.in_class_brace_count = isset(cache.in_class_brace_count) == false ? null : (cache.in_class_brace_count - (text.match(/\}/g) || []).length);
+				if (cache.in_class_brace_count === 0) {
+					cache.in_class = false;
+					cache.in_class_brace_count = null;
+				}
+				if (cache.in_class) {
+					var open_p = (text.match(/\(/g) || []);
+					var close_p = (text.match(/\)/g) || []);
+					var close_brace = text.lastIndexOf('{') == text.length - 1; //require brace at end
+					if (open_p.length > 0 && close_p.length > 0 && close_brace) {
+						checkType.method.push(close_p[close_p.length - 1]);
+					}
+				}
+			}
 		}
 
+		checkType.method.push(text.lastIndexOf("function "));
+		checkType.method.push(text.lastIndexOf("function("));
+		checkType.method.push(text.lastIndexOf("constructor ("));
+		checkType.method.push(text.lastIndexOf("constructor("));
+		checkType.method.push(text.lastIndexOf("=> {"));
+		checkType.method.push(text.lastIndexOf("=>{"));
+		checkType.method = checkType.method.filter(function (item) {
+			return item !== -1; // remove un needed
+		})
+
+		//--------------------------------
 		//objects
-		checkFold.object.push(check_line.lastIndexOf("= {"));
-		checkFold.object.push(check_line.lastIndexOf("={"));
-		checkFold.object.push(check_line.lastIndexOf("({"));
+		checkType.object.push(text.lastIndexOf("= {"));
+		checkType.object.push(text.lastIndexOf("={"));
+		checkType.object.push(text.lastIndexOf("({"));
+		checkType.object = checkType.object.filter(function (item) {
+			return item !== -1; // remove un needed
+		})
 
+		//--------------------------------
 		//arrays
-		checkFold.array.push(check_line.lastIndexOf("= ["));
-		checkFold.array.push(check_line.lastIndexOf("=["));
-		checkFold.array.push(check_line.lastIndexOf("(["));
+		checkType.array.push(text.lastIndexOf("= ["));
+		checkType.array.push(text.lastIndexOf("=["));
+		checkType.array.push(text.lastIndexOf("(["));
+		checkType.array = checkType.array.filter(function (item) {
+			return item !== -1; // remove un needed
+		})
 
+		//--------------------------------
 		//while
-		// checkFold.while.push(check_line.lastIndexOf("while ("));
-		// checkFold.while.push(check_line.lastIndexOf("while("));
-		// checkFold.while.push(check_line.lastIndexOf("do {"));
-		// checkFold.while.push(check_line.lastIndexOf("do{"));
-		// preventFold.while.push(check_line.lastIndexOf("}while("))
-		// preventFold.while.push(check_line.lastIndexOf("} while("))
-		// preventFold.while.push(check_line.lastIndexOf("}while ("))
-		// preventFold.while.push(check_line.lastIndexOf("} while ("))
+		checkType.while.push(text.lastIndexOf("while ("));
+		checkType.while.push(text.lastIndexOf("while("));
+		checkType.while.push(text.lastIndexOf("do {"));
+		checkType.while.push(text.lastIndexOf("do{"));
+		checkType.while = checkType.while.filter(function (item) {
+			return item !== -1; // remove un needed
+		})
+		preventType.while.push(text.lastIndexOf("}while("))
+		preventType.while.push(text.lastIndexOf("} while("))
+		preventType.while.push(text.lastIndexOf("}while ("))
+		preventType.while.push(text.lastIndexOf("} while ("))
+		preventType.while = preventType.while.filter(function (item) {
+			return item !== -1; // remove un needed
+		})
+
+		//--------------------------------
+		//clean up
+		if (checkType.while.length > 0 || preventType.while.length > 0) {
+			checkType.method = []; //overrules method
+		}
+
 
 		//if
-		// checkFold.if.push(check_line.lastIndexOf("if ("));
-		// checkFold.if.push(check_line.lastIndexOf("if("));
+		checkType.if.push(text.lastIndexOf("if ("));
+		checkType.if.push(text.lastIndexOf("if("));
+		checkType.if = checkType.if.filter(function (item) {
+			return item !== -1; // remove un needed
+		})
+
 		// checkFold.if.push(check_line.lastIndexOf("else "));
 		// checkFold.if.push(check_line.lastIndexOf("else{"));
 
-		for (var type in checkFold) {
+		var lineType = '';
 
-			checkFold[type] = checkFold[type].filter(function (item) {
-				return item !== -1; // remove un needed
-			})
-			preventFold[type] = preventFold[type].filter(function (item) {
-				return item !== -1; // remove un needed
-			})
-			var foldKeyPosition = length(checkFold[type]) > 0 ? checkFold[type][0] : null;
+		for (var type in checkType) {
 
-			if (foldKeyPosition !== null && length(preventFold[type]) == 0) {
+			var typePosition = checkType[type].length > 0 ? checkType[type][0] : null;
+
+			if (typePosition !== null && (isset(preventType[type]) == false || preventType[type].length == 0)) {
 
 				if (isset(keyWords[type])) {
 					for (var o in keyWords[type]) {
 						//correct for irregular method names with key word at end of function name call
-						if (check_line.lastIndexOf(keyWords[type][o]) > 0) {
-							var ops = ['(', ')', '=', '+', ' ', '}', '{'];
-							if (in_array(check_line[check_line.lastIndexOf(keyWords[type][o]) - 1], ops) == false) {
+						if (text.lastIndexOf(keyWords[type][o]) > 0) {
+							var ops = ['(', ')', '=', '+', ' ', '}', '{', ';'];
+							if (in_array(text[text.lastIndexOf(keyWords[type][o]) - 1], ops) == false) {
 								continue;
 							}
 						}
 					}
 				}
 
-				var braceCount = 0;
+				var braceCount = null;
 				var braceStart = false;
 				var lineCount = 0;
-				var lineNum = parseInt(i)
 
-				if (type == 'if') {
-					var next_line = strip_non_code(str_replace("\t", " ", lines[lineNum + 1]));
-					if (is_array(check_line.match(/\{/g)) == false && is_array(next_line.match(/\{/g)) == false) {
-						break; //ignore if statments with no starting brace
-					}
-				}
+
+				// if (type == 'if') {
+				// 	let next_line = lines[lineNum + 1]['text'];
+				// 	if (is_array(text.match(/\{/g)) == false && is_array(next_line.match(/\{/g)) == false) {
+				// 		break; //ignore if statments with no starting brace
+				// 	}
+				// }
 
 				//need to check starting at the location of the keyword so braces that came before it do not effect it
 				//need to make sure there is at least one line before end brace
-				return true;
-				while (lineNum < length(lines)) {
-					var line = lines[lineNum];
-					var first_line = true;
-					for (var o in line) {
+				while (isset(lines[lineNum])) {
+					let next_line = lines[lineNum]['text'];
+					let first_line = true;
+					for (var o in next_line) {
 						if (first_line == true) {
+							first_line = false;
 							//first line needs to check from cursor position
-							if (parseInt(o) >= foldKeyPosition) {
-								first_line = false;
+							if (parseInt(o) >= typePosition) {
 								if (type == 'array') {
-									if (line[o] == '[') {
-										braceStart = true;
-										braceCount++;
+									if (next_line[o] == '[') {
+										braceCount = braceCount === null ? 1 : braceCount + 1;
 									}
-									if (line[o] == ']') {
+									if (next_line[o] == ']') {
 										braceCount--;
 									}
 								} else {
 									//default
-									if (line[o] == '{') {
-										braceStart = true;
-										braceCount++;
+									if (next_line[o] == '{') {
+										braceCount = braceCount === null ? 1 : braceCount + 1;
 									}
-									if (line[o] == '}') {
+									if (next_line[o] == '}') {
 										braceCount--;
 									}
 								}
@@ -493,186 +607,222 @@ var SmartFold = function () {
 						} else {
 							//optimized checking of entire line
 							if (type == 'array') {
-								braceCount += (check_line.match(/\[/g) || []).length;
-								if (braceCount > 0) {
-									braceStart = true;
-								}
-								braceCount -= (check_line.match(/\]/g) || []).length;
+								var count = (next_line.match(/\[/g) || []).length;
+								braceCount = braceCount === null ? count : braceCount + count;
+								braceCount -= (next_line.match(/\]/g) || []).length;
 							} else {
-								braceCount += (check_line.match(/\{/g) || []).length;
-								if (braceCount > 0) {
-									braceStart = true;
-								}
-								braceCount -= (check_line.match(/\}/g) || []).length;
+								var count = (next_line.match(/\{/g) || []).length;
+								braceCount = braceCount === null ? count : braceCount + count;
+								braceCount -= (next_line.match(/\}/g) || []).length;
 							}
 						}
-
 					}
 
 					//no start brace found... ide fold region starts as keyword not brace
-					if (braceStart == false && braceCount == 0) {
+					if (braceCount === null || braceCount > 1) {
 						lineCount++;
 					}
-					//found starting brace on line with keyword and then no closing brace on next line.
-					if (braceStart && braceCount > 0) {
-						lineCount++;
+					if (braceCount === 0 || lineCount > 1) {
+						if (lineCount > 1) {
+							lineType = type;
+						}
+						break;
+						//stop
 					}
 					lineNum++;
-
-					if (lineCount > 1) {
-						//if more than one line then fold option available
-						return true;
-					}
 				}
 			}
 		}
 
-		return false;
+		var foldEnabled = isset(foldTypes[lineType]) && foldTypes[lineType]['enabled'] == true;
+
+		return {
+			type: lineType,
+			fold: foldEnabled,
+			text: text
+		};
 	}
 	function getLinesToFold(lines) {
 		var linesTofold = [];
+		var first_line = true;
 		for (var i in lines) {
-			if (isFoldLine(lines, i)) {
-				linesTofold.push({ line: parseInt(i), text: lines[i] });
+			var lineInfo = getLineInfo(lines[i]);
+			lines[i]['type'] = lineInfo['type'];
+			lines[i]['fold'] = lineInfo['fold'];
+			//override enabled settings for parent
+			if (lines[i]['fold'] == true || (first_line && lines[i]['type'] !== '')) {
+				linesTofold.push(lines[i]);
 			}
+			first_line = false;
 		}
 		return linesTofold;
 	}
-	function getLineNumbersToFold(lines) {
-		var linesTofold = getLinesToFold(lines);
-		return array_column(linesTofold, 'line');
+	function getLineNumbers(lines) {
+		return array_column(lines, 'line');
 	}
 	function getParentTopLineNumber() {
 
-		var lines = documentLines();
+		var lines = getDocumentLines();
 		var cursorPosition = application.editorCursorPosition();
 		var lineNumber = cursorPosition.line;
 		var startingCharPosition = cursorPosition.character;
 		var braceCount = 1;
 
+		var lineInfo = getLineInfo(lines[lineNumber]);
+		if (lineInfo['type'] != '') {
+			return lineNumber;
+		}
+
+		var first_line = true;
 		do {
-			var line = strip_non_code(lines[lineNumber]);
-			var x = startingCharPosition > 0 ? (startingCharPosition - 1) : length(line) - 1;
-			while (x >= 0) {
-				if (line[x] == '}') {
-					braceCount++;
-				} else if (line[x] == '{') {
-					braceCount--;
+			var text = lines[lineNumber]['text'];
+			if (first_line == true) {
+				first_line = false;
+				let x = startingCharPosition;
+				while (x >= 0) {
+					//check end of line
+					if (isset(text[x])) {
+						if (text[x] == '{') {
+							braceCount--;
+						} else if (text[x] == '}') {
+							braceCount++;
+						}
+					}
+					x--;
 				}
-				x--;
+			} else {
+				//optimize search of entire line for each additional line
+				braceCount -= (text.match(/\{/g) || []).length;
+				braceCount += (text.match(/\}/g) || []).length;
 			}
-			startingCharPosition = 0;
 			lineNumber--;
-		} while (braceCount > 0);
+		} while (braceCount > 0 && lineNumber >= 0);
 		lineNumber++;
 		return lineNumber;
 	}
 	function getParentBottomLineNumber() {
 
-		var lines = documentLines();
+		var lines = getDocumentLines();
 		var cursorPosition = application.editorCursorPosition();
 		var lineNumber = cursorPosition.line;
 		var startingCharPosition = cursorPosition.character;
 		var braceCount = 1;
+		var first_line = true;
+
+		var lineInfo = getLineInfo(lines[lineNumber]);
+		if (lineInfo['type'] != '') {
+			lineNumber++;
+			first_line = false;
+		}
 
 		do {
-			var line = strip_non_code(lines[lineNumber]);
-
-			let x = startingCharPosition > 0 ? startingCharPosition : 0;
-
-			while (x < length(line)) {
-				//check end of line
-				if (isset(line[x])) {
-					if (line[x] == '{') {
-						braceCount++;
-					} else if (line[x] == '}') {
-						braceCount--;
+			var text = lines[lineNumber]['text'];
+			//first line checks from cursor position
+			if (first_line == true) {
+				first_line = false;
+				let x = startingCharPosition;
+				while (x < length(text)) {
+					//check end of line
+					if (isset(text[x])) {
+						if (text[x] == '{') {
+							braceCount++;
+						} else if (text[x] == '}') {
+							braceCount--;
+						}
 					}
+					x++;
 				}
-				x++;
+			} else {
+				//optimize search of entire line for each additional line
+				braceCount += (text.match(/\{/g) || []).length;
+				braceCount -= (text.match(/\}/g) || []).length;
 			}
-			startingCharPosition = 0;
 			lineNumber++;
-		} while (braceCount > 0);
+		} while (braceCount > 0 && lineNumber < length(lines));
 		lineNumber--;
 		return lineNumber;
 	}
-	function getParentAllLines() {
-		var topLineNumber = getParentTopLineNumber();
-		var bottomLineNumber = getParentBottomLineNumber();
-		var lines = documentLines();
+	function getDocumentLines() {
+		if (isset(cache.documentLines) == false) {
+			var lines = application.documentLines();
+			cache.documentLines = [];
+			for (var i in lines) {
+				//add ws to front. strip tabs
+				var line = parseInt(i);
+				cache.documentLines[line] = {
+					line: line,
+					text: (' ' + strip_non_code(trim(lines[i]))) //if you add anything to end of line fix the js class function brace checking
+				};
+			}
+		}
+		return cache.documentLines;
+	}
+	function getParentLines(exclude_parent) {
+		var topLineNumber = getParentTopLineNumber() + (is_true(exclude_parent) ? 1 : 0);
+		var bottomLineNumber = getParentBottomLineNumber() - (is_true(exclude_parent) ? 1 : 0);
+		var lines = getDocumentLines();
 		var parentLines = new Array;
 		for (var i in lines) {
-			if (parseInt(i) >= topLineNumber && parseInt(i) <= bottomLineNumber) {
-				parentLines[i] = lines[i];
+			if (lines[i]['line'] >= topLineNumber && lines[i]['line'] <= bottomLineNumber) {
+				parentLines.push(lines[i]);
 			}
 		}
 		return parentLines;
 	}
-	function getParentLineNumbers() {
-		var parentLines = getParentAllLines();
-		return array_column(parentLines, 'line');
-	}
-	function getParentFoldLines(exclude_parent) {
-		var topLineNumber = getParentTopLineNumber() + (is_true(exclude_parent) ? 1 : 0);
-		var bottomLineNumber = getParentBottomLineNumber() - (is_true(exclude_parent) ? 1 : 0);
-		var lines = documentLines();
-		var parentLinesToFold = new Array;
-		for (var i in lines) {
-			if (parseInt(i) >= topLineNumber && parseInt(i) <= bottomLineNumber) {
-				parentLinesToFold[i] = lines[i];
-			}
+
+	//fold
+	async function fold(lines, inner) {
+		inner = is_bool(inner) ? inner : false;
+		var linesTofold = getLinesToFold(lines);
+		if (inner) {
+			linesTofold = linesTofold.slice(1);
 		}
-		return parentLinesToFold;
+		var lineNumbersToFold = getLineNumbers(linesTofold);
+		application.editorSelectLines(lineNumbersToFold);
+		await application.editorFoldSelectedLines();
+		application.editorUnSelectAll(); //clear selected lines
+	}
+	async function unFold(lines) {
+		var lineNumbersToUnFold = getLineNumbers(lines);
+		application.editorSelectLines(lineNumbersToUnFold);
+		await application.editorUnFoldSelectedLines();
+		application.editorUnSelectAll(); //clear selected lines
 	}
 
 	//actions
 	this.foldAll = async function () {
 		cache = {};
 		debug('commandFoldAll')
-		debug(vscode.workspace.getConfiguration('fold-type').get('class'));
-		debug('1')
-		var lines = documentLines();
-		debug('2')
-		var linesTofold = getLinesToFold(lines);
-		debug('3')
-		application.editorSelectLines(array_column(linesTofold, 'line'));
-		debug('4')
-		await application.editorFoldSelectedLines();
-		debug('5')
-		application.editorUnSelectAll(); //clear selected lines
-		debug('6')
-		application.editorSetCursorPosition(linesTofold[0]['line']); //place cursor at start of parent
-		debug('7')
+		var lines = getDocumentLines();
+		await fold(lines);
+		application.editorSetCursorPosition(lines[0]['line']); //place cursor at start of parent
 	}
 	this.foldParent = async function () {
 		cache = {};
 		debug('commandFoldParent')
-		var linesToFold = getParentFoldLines();
-		var lineNumbersToFold = getLineNumbersToFold(linesToFold);
-		application.editorSelectLines(lineNumbersToFold);
-		await application.editorFoldSelectedLines();
-		application.editorUnSelectAll(); //clear selected lines
-		application.editorSetCursorPosition(lineNumbersToFold[0]); //place cursor at start of parent
+		var lines = getParentLines();
+		await fold(lines);
+		application.editorSetCursorPosition(lines[0]['line']); //place cursor at start of parent
 	}
 	this.foldChildren = async function () {
 		cache = {};
 		debug('commandFoldChildren');
 		var cursorPosition = application.editorCursorPosition();
-		var linesToFold = getParentFoldLines(true);
-		var lineNumbersToFold = getLineNumbersToFold(linesToFold);
-		application.editorSelectLines(lineNumbersToFold);
-		await application.editorFoldSelectedLines();
-		application.editorUnSelectAll(); //clear selected lines
+		var lines = getParentLines();
+		debug(lines)
+		await fold(lines, true);
 		application.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
 	}
+	this.unFoldAll = async function () {
+		debug('unFoldAll');
+		//not really neccessary but people will probably wonder why and unfold all didnt come packaged with the extension
+		await application.executeCommand('editor.unfoldAll');
+	}
 	this.unFoldParent = async function () {
-		debug('expandFoldParent');
+		debug('unFoldParent');
+		cache = {};
 		var cursorPosition = application.editorCursorPosition();
-		var lineNumbersToUnFold = getParentLineNumbers();
-		application.editorSelectLines(lineNumbersToUnFold);
-		application.editorUnFoldSelectedLines();
-		application.editorUnSelectAll(); //clear selected lines
+		await unFold(getParentLines());
 		application.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
 	}
 }
@@ -691,6 +841,9 @@ function activate(_context) {
 	});
 	application.registerCommand('fold-type.fold-children', async function () {
 		await smartFold.foldChildren();
+	});
+	application.registerCommand('fold-type.unfold-all', async function () {
+		await smartFold.unFoldAll();
 	});
 	application.registerCommand('fold-type.unfold-parent', async function () {
 		await smartFold.unFoldParent();

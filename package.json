@@ -4,7 +4,7 @@
   "description": "Fold on types (class, methods, etc..) instead of levels",
   "version": "1.0.0",
   "publisher": "outofsync42",
-	"license": "MIT",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.67.0"
   },
@@ -15,6 +15,7 @@
     "onCommand:fold-type.fold-all",
     "onCommand:fold-type.fold-parent",
     "onCommand:fold-type.fold-children",
+    "onCommand:fold-type.unfold-all",
     "onCommand:fold-type.unfold-parent"
   ],
   "main": "./extension.js",
@@ -22,52 +23,93 @@
     "commands": [
       {
         "command": "fold-type.fold-all",
-        "title": "Fold Types All"
+        "title": "Fold Types All",
+        "when": "editorTextFocus && foldingEnabled"
       },
       {
         "command": "fold-type.fold-parent",
-        "title": "Fold Types Parent"
+        "title": "Fold Types Parent",
+        "when": "editorTextFocus && foldingEnabled"
       },
       {
         "command": "fold-type.fold-children",
-        "title": "Fold Types Children"
+        "title": "Fold Types Children",
+        "when": "editorTextFocus && foldingEnabled"
+      },
+      {
+        "command": "fold-type.unfold-all",
+        "title": "UnFold Types All",
+        "when": "editorTextFocus && foldingEnabled"
       },
       {
         "command": "fold-type.unfold-parent",
-        "title": "Fold Types Parent"
+        "title": "UnFold Types Parent",
+        "when": "editorTextFocus && foldingEnabled"
+      }
+    ],
+    "keybindings": [
+      {
+        "key": "ctrl+shift+numpad_subtract",
+        "command": "fold-type.fold-all",
+        "when": "editorTextFocus && foldingEnabled"
+      },
+      {
+        "key": "ctrl+shift+numpad_divide",
+        "command": "fold-type.fold-parent",
+        "when": "editorTextFocus && foldingEnabled"
+      },
+      {
+        "key": "ctrl+shift+/",
+        "command": "fold-type.fold-children",
+        "when": "editorTextFocus && foldingEnabled"
+      },
+      {
+        "key": "ctrl+shift+numpad_add",
+        "command": "fold-type.unfold-all",
+        "when": "editorTextFocus && foldingEnabled"
+      },
+      {
+        "key": "ctrl+shift+numpad_multiply",
+        "command": "fold-type.unfold-parent",
+        "when": "editorTextFocus && foldingEnabled"
       }
     ],
     "configuration": {
-			"type": "object",
-			"title": "Fold Types Configuration",
-			"properties": {
-				"fold-type.class": {
-					"type": "bool",
-					"default": true,
-					"description": "Fold Classes"
-				},
+      "type": "object",
+      "title": "Fold Types Configuration",
+      "properties": {
+        "fold-type.class": {
+          "type": "bool",
+          "default": true,
+          "description": "Fold Classes"
+        },
         "fold-type.method": {
-					"type": "bool",
-					"default": true,
-					"description": "Fold Methods"
-				},
+          "type": "bool",
+          "default": true,
+          "description": "Fold Methods"
+        },
         "fold-type.object": {
-					"type": "bool",
-					"default": true,
-					"description": "Fold Objects"
-				},
+          "type": "bool",
+          "default": true,
+          "description": "Fold Objects"
+        },
         "fold-type.array": {
-					"type": "bool",
-					"default": true,
-					"description": "Fold Arrays"
-				},
+          "type": "bool",
+          "default": true,
+          "description": "Fold Arrays"
+        },
         "fold-type.while": {
-					"type": "bool",
-					"default": false,
-					"description": "Fold While/DoWhile"
-				}
-			}
-		}
+          "type": "bool",
+          "default": false,
+          "description": "Fold While / Do"
+        },
+        "fold-type.if": {
+          "type": "bool",
+          "default": true,
+          "description": "Fold For / foreach"
+        }
+      }
+    }
   },
   "scripts": {
     "lint": "eslint .",
