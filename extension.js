@@ -892,6 +892,505 @@ var FoldTypes = function (application) {
 
 		}
 	}
+	function cacheDocumentJSLine(line_x) {
+
+		var open_bracket = new RegExp('\\{', 'g');
+		var close_bracket = new RegExp('\\}', 'g');
+		var open_brace = new RegExp('\\[', 'g');
+		var close_brace = new RegExp('\\]', 'g');
+
+		cache.documentLines[line_x]['isFoldType'] = false;
+		cache.documentLines[line_x]['isFoldEnabled'] = false;
+
+		var bracketStart = cache.documentLines[line_x]['text'].lastIndexOf("{");
+		var braceStart = cache.documentLines[line_x]['text'].lastIndexOf("[");
+		var lineCount = 0;
+		var parens = 0;
+		var is_parens = false;
+		var found_key_line = false;
+
+		if (braceStart > -1 && braceStart > bracketStart) {
+			//found array start
+			let line_xx = line_x;
+			let max_lines = 10; //looking up the bracket should be either on same line or 1 below. check 10 just to be thurough
+			let start = true;
+			//look backwards until finding operator
+			while (line_xx > -1 && max_lines > 0) {
+				var line = cache.documentLines[line_xx]['text'];
+				let char_x = start ? braceStart : line.length;
+				while (char_x > 0) {
+					if (line[char_x - 1] == "=" && line[char_x] == ">") {
+						cache.documentLines[line_xx]['lineType'] = "arrayParam"; //method
+						break;
+					}
+					if (line[char_x] == "=" || ((line[char_x] == ":" || line[char_x] == "?") && line.indexOf(":") > -1 && line.indexOf("?") > -1)) {
+						cache.documentLines[line_xx]['lineType'] = "array"; //method
+						break;
+					}
+					if (line[char_x] == "(" || line[char_x] == "," || line[char_x] == ":") {
+						cache.documentLines[line_xx]['lineType'] = "arrayParam"; //objectParam
+						break;
+					}
+					char_x--;
+				}
+
+				if (cache.documentLines[line_xx]['lineType'] !== "") {
+					break;
+				}
+
+				start = false; //first line flag
+				line_xx--;
+				max_lines--;
+				lineCount++;
+			}
+
+
+			//get total lines
+			var line_xxx = line_x;
+			let char_x = braceStart; //unformatted row
+			var braceCount = 0;
+			while (line_xxx < cache.documentLines.length && lineCount < 3) {
+				lineCount++;
+				let line = cache.documentLines[line_xxx]['text'];
+				while (char_x < line.length) {
+					if (line[char_x] == "{") {
+						bracketCount++;
+					}
+					if (line[char_x] == "}") {
+						bracketCount--;
+					}
+					if (bracketCount == 0) {
+						break;
+					}
+					char_x++;
+				}
+				if (braceCount == 0) {
+					break;
+				}
+				char_x = 0;
+				line_xxx++;
+			}
+
+			if (lineCount < 3) {
+				cache.documentLines[line_xx]['lineType'] = "";
+			}
+
+			setFoldInfo(line_xx);
+
+		} else if (bracketStart > -1) {
+
+			//get type
+			let line_xx = line_x;
+			let max_lines = 10; //looking up the bracket should be either on same line or 1 below. check 10 just to be thurough
+			let start = true;
+			while (line_xx > -1 && max_lines > 0) {
+
+				var line = cache.documentLines[line_xx]['text'];
+				let char_x = start ? bracketStart : line.length;
+
+				var check_line = line;
+
+				while (char_x > 0) {
+
+					if (line[char_x] == ")") {
+						is_parens = true;
+						parens++;
+					}
+
+					//check for types related to matching operators
+					if (is_parens == false) {
+						if (char_x > 0 && line[char_x - 1] == "=" && line[char_x] == ">") {
+							cache.documentLines[line_xx]['lineType'] = "method"; //method
+							break;
+						}
+						if (line[char_x] == ":" && check_line.indexOf(" case ") > -1) {
+							cache.documentLines[line_xx]['lineType'] = start ? "switchCase" : "switchCaseInvalid"; //switchCaseInvalid ... this is bad code but js allows it and needs to correct for it below
+							break;
+						}
+						if (line[char_x] == ":" && check_line.indexOf(" default ") > -1) {
+							cache.documentLines[line_xx]['lineType'] = "switchDefault"; //switchDefault
+							break;
+						}
+						if (line[char_x] == "=" || ((line[char_x] == ":" || line[char_x] == "?") && line.indexOf(":") > -1 && line.indexOf("?") > -1)) {
+							cache.documentLines[line_xx]['lineType'] = "object"; //object
+							break;
+						}
+						if (line[char_x] == "(" || line[char_x] == "," || line[char_x] == ":") {
+							cache.documentLines[line_xx]['lineType'] = "objectParam"; //objectParam
+							break;
+						}
+					}
+
+					//found parens which means we should have a keyword after it closes
+					if (is_parens) {
+						//searching for key word
+						if (line[char_x] == "(") {
+							parens--;
+						}
+						if (parens == 0) {
+							found_key_line = true; //if key word not wound then will be marked as other
+							check_line = line.slice(0, char_x);
+							break;
+						}
+					}
+					char_x--;
+				}
+
+				if (cache.documentLines[line_xx]['lineType'] !== "") {
+					break;
+				}
+
+				//check line should contain one of these key words. if not goes to next line
+				if (check_line.indexOf(" if ") > -1 || check_line.indexOf(" elseif ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "if";
+					break;
+				} else if (check_line.indexOf(" else ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "else";
+					break;
+				} else if (check_line.indexOf(" for ") > -1 || check_line.indexOf(" foreach ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "for";
+					break;
+				} else if (check_line.indexOf(" function ") > -1 || check_line.indexOf(" get ") > -1 || check_line.indexOf(" set ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "method";
+					break;
+				} else if (check_line.indexOf(" do ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "while";
+					break;
+				} else if (check_line.indexOf(" while ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "while";
+					break;
+				} else if (check_line.indexOf(" try ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "try";
+					break;
+				} else if (check_line.indexOf(" catch ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "tryCatch";
+					break;
+				} else if (check_line.indexOf(" finally ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "tryFinally";
+					break;
+				} else if (check_line.indexOf(" class ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "class";
+					break;
+				} else if (check_line.indexOf(" return ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "object";
+					break;
+				} else if (check_line.indexOf(" switch ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "switch";
+					break;
+				} else if (check_line.indexOf(" const ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "object";
+					break;
+				} else if (false && check_line.indexOf(" case ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "switchCase"; //will not be found here becuase there is no open bracket
+					break;
+				} else if (false && check_line.indexOf(" default ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "switchDefault"; //will not be found here becuase there is no open bracket
+					break;
+				} else if (found_key_line) {
+					cache.documentLines[line_xx]['lineType'] = "method"; //default to method
+					break;
+				}
+
+				start = false; //first line flag
+				line_xx--;
+				max_lines--;
+				lineCount++;
+			}
+
+			//get total lines
+			var line_xxx = line_x;
+			let char_x = bracketStart; //unformatted row
+			var bracketCount = 0;
+			var first = true;
+			while (line_xxx < cache.documentLines.length && lineCount < 3) {
+				lineCount++;
+				let line = cache.documentLines[line_xxx]['text'];
+				if (first) {
+					first = false
+					while (char_x < line.length) {
+						if (line[char_x] == "{") {
+							bracketCount++;
+						}
+						if (line[char_x] == "}") {
+							bracketCount--;
+						}
+						char_x++;
+					}
+				} else {
+					bracketCount += (line.match(open_bracket) || []).length;
+					bracketCount -= (line.match(close_bracket) || []).length;
+				}
+				if (bracketCount == 0) {
+					break;
+				}
+
+				char_x = 0;
+				line_xxx++;
+			}
+
+			if (lineCount < 3 || cache.documentLines[line_xx]['lineType'] == "other") {
+				cache.documentLines[line_xx]['lineType'] = cache.documentLines[line_xx]['lineType'] == "other" ? cache.documentLines[line_xx]['lineType'] : "";
+			}
+
+			setFoldInfo(line_xx);
+		}
+
+	}
+	function cacheDocumentPHPLine(line_x) {
+
+		var open_bracket = new RegExp('\\{', 'g');
+		var close_bracket = new RegExp('\\}', 'g');
+		var code_data = new RegExp('[^\\{\\} ~]', 'g');
+		var open_brace = new RegExp('\\[', 'g');
+		var close_brace = new RegExp('\\]', 'g');
+
+		cache.documentLines[line_x]['isFoldType'] = false;
+		cache.documentLines[line_x]['isFoldEnabled'] = false;
+
+		//comments already flagged in cacheDocumentLines();
+		if (cache.documentLines[line_x]['lineType'] == "comment") {
+			setFoldInfo(line_x);
+			return;
+		}
+
+		var bracketStart = cache.documentLines[line_x]['text'].lastIndexOf("{");
+		var braceStart = cache.documentLines[line_x]['text'].lastIndexOf("[");
+		var lineCount = 0;
+		var parens = 0;
+		var is_parens = false;
+		var found_key_line = false;
+
+		if (braceStart > -1 && braceStart > bracketStart) {
+			//found array start
+			let line_xx = line_x;
+			let max_lines = 10; //looking up the bracket should be either on same line or 1 below. check 10 just to be thurough
+			let start = true;
+			//look backwards until finding operator
+			while (line_xx > -1 && max_lines > 0) {
+				var line = cache.documentLines[line_xx]['text'];
+				let char_x = start ? braceStart : line.length;
+				while (char_x > 0) {
+					if (line[char_x - 1] == "=" && line[char_x] == ">") {
+						cache.documentLines[line_xx]['lineType'] = "arrayParam"; //method
+						break;
+					}
+					if (line[char_x] == "=" || ((line[char_x] == ":" || line[char_x] == "?") && line.indexOf(":") > -1 && line.indexOf("?") > -1)) {
+						cache.documentLines[line_xx]['lineType'] = "array"; //method
+						cache.documentLines[line_xx]['here'] = true
+						break;
+					}
+					if (line[char_x] == "(" || line[char_x] == "," || line[char_x] == ":") {
+						cache.documentLines[line_xx]['lineType'] = "arrayParam"; //objectParam
+						break;
+					}
+					char_x--;
+				}
+
+				if (cache.documentLines[line_xx]['lineType'] !== "") {
+					break;
+				}
+
+				start = false; //first line flag
+				line_xx--;
+				max_lines--;
+				lineCount++;
+			}
+
+
+			//get total lines
+			var line_xxx = line_x;
+			let char_x = braceStart; //unformatted row
+			var braceCount = 0;
+			var first = true;
+			while (line_xxx < cache.documentLines.length && lineCount < 3) {
+				lineCount++;
+				let line = cache.documentLines[line_xxx]['text'];
+				if (first) {
+					first = false
+					while (char_x < line.length) {
+						if (line[char_x] == "[") {
+							braceCount++;
+						}
+						if (line[char_x] == "]") {
+							braceCount--;
+						}
+						char_x++;
+					}
+				} else {
+					braceCount += (line.match(open_brace) || []).length;
+					braceCount -= (line.match(close_brace) || []).length;
+				}
+				if (braceCount == 0) {
+					break;
+				}
+
+				char_x = 0;
+				line_xxx++;
+			}
+
+			if (lineCount < 3) {
+				cache.documentLines[line_xx]['lineType'] = "";
+			}
+
+			setFoldInfo(line_xx);
+
+		} else if (bracketStart > -1) {
+			//get type
+			let line_xx = line_x;
+			let max_lines = 10; //looking up the bracket should be either on same line or 1 below. check 10 just to be thurough
+			let start = true;
+			while (line_xx > -1 && max_lines > 0) {
+
+				var line = cache.documentLines[line_xx]['text'];
+				let char_x = start ? bracketStart : line.length;
+
+				var check_line = line;
+
+				while (char_x > 0) {
+
+					if (line[char_x] == ")") {
+						is_parens = true;
+						parens++;
+					}
+
+					//check for types related to matching operators
+					if (is_parens == false) {
+
+						if (line[char_x] == ":" && check_line.indexOf(" case ") > -1) {
+							cache.documentLines[line_x]['lineType'] = start ? "switchCase" : "switchCaseInvalid"; //switchCaseInvalid ... this is bad code but js allows it and needs to correct for it below
+							break;
+						}
+						if (line[char_x] == ":" && check_line.indexOf(" default ") > -1) {
+							cache.documentLines[line_x]['lineType'] = "switchDefault"; //switchDefault
+							break;
+						}
+						if (line[char_x] == "=" || ((line[char_x] == ":" || line[char_x] == "?") && line.indexOf(":") > -1 && line.indexOf("?") > -1)) {
+							cache.documentLines[line_x]['lineType'] = "object"; //object
+							break;
+						}
+						if (line[char_x] == "(" || line[char_x] == "," || line[char_x] == ":") {
+							cache.documentLines[line_x]['lineType'] = "objectParam"; //objectParam
+							break;
+						}
+					}
+
+					//found parens which means we should have a keyword after it closes
+					if (is_parens) {
+						//searching for key word
+						if (line[char_x] == "(") {
+							parens--;
+						}
+						if (parens == 0) {
+							found_key_line = true; //if key word not wound then will be marked as other
+							check_line = line.slice(0, char_x);
+							break;
+						}
+					}
+					char_x--;
+				}
+
+				if (cache.documentLines[line_x]['lineType'] !== "") {
+					break;
+				}
+
+				//check line should contain one of these key words. if not goes to next line
+				if (check_line.indexOf(" if ") > -1 || check_line.indexOf(" elseif ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "if";
+					break;
+				} else if (check_line.indexOf(" else ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "else";
+					break;
+				} else if (check_line.indexOf(" for ") > -1 || check_line.indexOf(" foreach ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "for";
+					break;
+				} else if (check_line.indexOf(" function ") > -1 || check_line.indexOf(" get ") > -1 || check_line.indexOf(" set ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "method";
+					break;
+				} else if (check_line.indexOf(" do ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "while";
+					break;
+				} else if (check_line.indexOf(" while ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "while";
+					break;
+				} else if (check_line.indexOf(" try ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "try";
+					break;
+				} else if (check_line.indexOf(" catch ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "tryCatch";
+					break;
+				} else if (check_line.indexOf(" finally ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "tryFinally";
+					break;
+				} else if (check_line.indexOf(" class ") > -1 || check_line.indexOf(" trait ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "class";
+					break;
+				} else if (check_line.indexOf(" return ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "object";
+					break;
+				} else if (check_line.indexOf(" switch ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "switch";
+					break;
+				} else if (check_line.indexOf(" const ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "object";
+					break;
+				} else if (false && check_line.indexOf(" case ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "switchCase"; //will not be found here becuase there is no open bracket
+					break;
+				} else if (false && check_line.indexOf(" default ") > -1) {
+					cache.documentLines[line_x]['lineType'] = "switchDefault"; //will not be found here becuase there is no open bracket
+					break;
+				} else if (found_key_line) {
+					cache.documentLines[line_x]['lineType'] = "other"; //default to method
+					break;
+				}
+
+				start = false; //first line flag
+				line_xx--;
+				max_lines--;
+				//lineCount++; line count starts at bracket. not the key word line
+			}
+
+			//get total lines
+			var line_xxx = line_x;
+			let char_x = bracketStart;
+			var bracketCount = 0;
+			var first = true;
+			var hasData = false; //php requires data
+			while (line_xxx < cache.documentLines.length && (lineCount < 3 || hasData == false)) {
+				lineCount++;
+				let line = cache.documentLines[line_xxx]['text'];
+				while (char_x < line.length) {
+					if (line[char_x] == "{") {
+						bracketCount++;
+					}
+					if (line[char_x] == "}") {
+						bracketCount--;
+					}
+					if (bracketCount == 0) {
+						break;
+					}
+					char_x++;
+				}
+
+				if (bracketCount == 0) {
+					break;
+				}
+
+				//data required below start bracket
+				hasData = hasData || (lineCount > 1 && (line.match(code_data) || []).length > 0);
+				
+				char_x = 0;
+				line_xxx++;
+			}
+
+			if (hasData == false || lineCount < 3 || cache.documentLines[line_x]['lineType'] == "other") {
+				cache.documentLines[line_x]['lineType'] = cache.documentLines[line_x]['lineType'] == "other" ? cache.documentLines[line_x]['lineType'] : "";
+			}
+
+			setFoldInfo(line_x);
+		}
+
+	}
 	function getDocumentLines() {
 
 		if (isset(cache.documentLines)) {
@@ -904,258 +1403,30 @@ var FoldTypes = function (application) {
 		var close_bracket = new RegExp('\\}', 'g');
 		var open_brace = new RegExp('\\[', 'g');
 		var close_brace = new RegExp('\\]', 'g');
-
+		debug(cache.documentLines)
+		var hasJs = false;
 		for (var i in cache.documentLines) {
 
 			let line_x = parseInt(i);
 
-			cache.documentLines[line_x]['isFoldType'] = false;
-			cache.documentLines[line_x]['isFoldEnabled'] = false;
+			var syntax = cache.documentLines[line_x]['syntax'];
 
-			var bracketStart = cache.documentLines[line_x]['text'].lastIndexOf("{");
-			var braceStart = cache.documentLines[line_x]['text'].lastIndexOf("[");
-			var lineCount = 0;
-			var parens = 0;
-			var is_parens = false;
-			var found_key_line = false;
+			if (syntax == "js") {
+				hasJs = true;
+				cacheDocumentJSLine(line_x);
+				continue;
+			}
 
-			if (braceStart > -1 && braceStart > bracketStart) {
-				//found array start
-				let line_xx = line_x;
-				let max_lines = 10; //looking up the bracket should be either on same line or 1 below. check 10 just to be thurough
-				let start = true;
-				//look backwards until finding operator
-				while (line_xx > -1 && max_lines > 0) {
-					var line = cache.documentLines[line_xx]['text'];
-					let char_x = start ? braceStart : line.length;
-					while (char_x > 0) {
-						if (line[char_x - 1] == "=" && line[char_x] == ">") {
-							cache.documentLines[line_xx]['lineType'] = "arrayParam"; //method
-							break;
-						}
-						if (line[char_x] == "=" || ((line[char_x] == ":" || line[char_x] == "?") && line.indexOf(":") > -1 && line.indexOf("?") > -1)) {
-							cache.documentLines[line_xx]['lineType'] = "array"; //method
-							cache.documentLines[line_xx]['here'] = true
-							break;
-						}
-						if (line[char_x] == "(" || line[char_x] == "," || line[char_x] == ":") {
-							cache.documentLines[line_xx]['lineType'] = "arrayParam"; //objectParam
-							break;
-						}
-						char_x--;
-					}
-
-					if (cache.documentLines[line_xx]['lineType'] !== "") {
-						break;
-					}
-
-					start = false; //first line flag
-					line_xx--;
-					max_lines--;
-					lineCount++;
-				}
-
-
-				//get total lines
-				var line_xxx = line_x;
-				let char_x = braceStart; //unformatted row
-				var braceCount = 0;
-				var first = true;
-				while (line_xxx < cache.documentLines.length && lineCount < 3) {
-					lineCount++;
-					let line = cache.documentLines[line_xxx]['text'];
-					if (first) {
-						first = false
-						while (char_x < line.length) {
-							if (line[char_x] == "[") {
-								braceCount++;
-							}
-							if (line[char_x] == "]") {
-								braceCount--;
-							}
-							char_x++;
-						}
-					} else {
-						braceCount += (line.match(open_brace) || []).length;
-						braceCount -= (line.match(close_brace) || []).length;
-					}
-					if (braceCount == 0) {
-						break;
-					}
-
-					char_x = 0;
-					line_xxx++;
-				}
-
-				if (lineCount < 3) {
-					cache.documentLines[line_xx]['lineType'] = "";
-				}
-
-				setFoldInfo(line_xx);
-
-			} else if (bracketStart > -1) {
-				//get type
-				let line_xx = line_x;
-				cache.documentLines[line_xx]['bracketStart'] = bracketStart;
-				let max_lines = 10; //looking up the bracket should be either on same line or 1 below. check 10 just to be thurough
-				let start = true;
-				while (line_xx > -1 && max_lines > 0) {
-
-					var line = cache.documentLines[line_xx]['text'];
-					let char_x = start ? bracketStart : line.length;
-
-					var check_line = line;
-
-					while (char_x > 0) {
-
-						if (line[char_x] == ")") {
-							is_parens = true;
-							parens++;
-						}
-
-						//check for types related to matching operators
-						if (is_parens == false) {
-							if (char_x > 0 && line[char_x - 1] == "=" && line[char_x] == ">") {
-								cache.documentLines[line_xx]['lineType'] = "method"; //method
-								break;
-							}
-							if (line[char_x] == ":" && check_line.indexOf(" case ") > -1) {
-								cache.documentLines[line_xx]['lineType'] = start ? "switchCase" : "switchCaseInvalid"; //switchCaseInvalid ... this is bad code but js allows it and needs to correct for it below
-								break;
-							}
-							if (line[char_x] == ":" && check_line.indexOf(" default ") > -1) {
-								cache.documentLines[line_xx]['lineType'] = "switchDefault"; //switchDefault
-								break;
-							}
-							if (line[char_x] == "=" || ((line[char_x] == ":" || line[char_x] == "?") && line.indexOf(":") > -1 && line.indexOf("?") > -1)) {
-								cache.documentLines[line_xx]['lineType'] = "object"; //object
-								break;
-							}
-							if (line[char_x] == "(" || line[char_x] == "," || line[char_x] == ":") {
-								cache.documentLines[line_xx]['lineType'] = "objectParam"; //objectParam
-								break;
-							}
-						}
-
-						//found parens which means we should have a keyword after it closes
-						if (is_parens) {
-							//searching for key word
-							if (line[char_x] == "(") {
-								parens--;
-							}
-							if (parens == 0) {
-								found_key_line = true; //if key word not wound then will be marked as other
-								check_line = line.slice(0, char_x);
-								break;
-							}
-						}
-						char_x--;
-					}
-
-					if (cache.documentLines[line_xx]['lineType'] !== "") {
-						break;
-					}
-
-					//check line should contain one of these key words. if not goes to next line
-					if (check_line.indexOf(" if ") > -1 || check_line.indexOf(" elseif ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "if";
-						break;
-					} else if (check_line.indexOf(" else ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "else";
-						break;
-					} else if (check_line.indexOf(" for ") > -1 || check_line.indexOf(" foreach ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "for";
-						break;
-					} else if (check_line.indexOf(" function ") > -1 || check_line.indexOf(" get ") > -1 || check_line.indexOf(" set ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "method";
-						break;
-					} else if (check_line.indexOf(" do ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "while";
-						break;
-					} else if (check_line.indexOf(" while ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "while";
-						break;
-					} else if (check_line.indexOf(" try ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "try";
-						break;
-					} else if (check_line.indexOf(" catch ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "tryCatch";
-						break;
-					} else if (check_line.indexOf(" finally ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "tryFinally";
-						break;
-					} else if (check_line.indexOf(" class ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "class";
-						break;
-					} else if (check_line.indexOf(" return ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "object";
-						break;
-					} else if (check_line.indexOf(" switch ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "switch";
-						break;
-					} else if (check_line.indexOf(" const ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "object";
-						break;
-					} else if (false && check_line.indexOf(" case ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "switchCase"; //will not be found here becuase there is no open bracket
-						break;
-					} else if (false && check_line.indexOf(" default ") > -1) {
-						cache.documentLines[line_xx]['lineType'] = "switchDefault"; //will not be found here becuase there is no open bracket
-						break;
-					} else if (found_key_line) {
-						cache.documentLines[line_xx]['lineType'] = "method"; //default to method
-						break;
-					}
-
-					start = false; //first line flag
-					line_xx--;
-					max_lines--;
-					lineCount++;
-				}
-
-				//get total lines
-				var line_xxx = line_x;
-				let char_x = bracketStart; //unformatted row
-				var bracketCount = 0;
-				var first = true;
-				while (line_xxx < cache.documentLines.length && lineCount < 3) {
-					lineCount++;
-					let line = cache.documentLines[line_xxx]['text'];
-					if (first) {
-						first = false
-						while (char_x < line.length) {
-							if (line[char_x] == "{") {
-								bracketCount++;
-							}
-							if (line[char_x] == "}") {
-								bracketCount--;
-							}
-							char_x++;
-						}
-					} else {
-						bracketCount += (line.match(open_bracket) || []).length;
-						bracketCount -= (line.match(close_bracket) || []).length;
-					}
-					if (bracketCount == 0) {
-						break;
-					}
-
-					char_x = 0;
-					line_xxx++;
-				}
-
-				if (lineCount < 3 || cache.documentLines[line_xx]['lineType'] == "other") {
-					cache.documentLines[line_xx]['lineType'] = cache.documentLines[line_xx]['lineType'] == "other" ? cache.documentLines[line_xx]['lineType'] : "";
-				}
-
-				setFoldInfo(line_xx);
+			if (syntax == "php") {
+				cacheDocumentPHPLine(line_x);
+				continue;
 			}
 
 		}
 
-		var commentFoldEnabled = getFoldEnabled("comment", "js");
+		var jsCommentFoldEnabled = hasJs && getFoldEnabled("comment", "js");
 
-		if (commentFoldEnabled == true) {
+		if (jsCommentFoldEnabled == true) {
 			//javascript has wierd rules that only comments above var and function declarations are foldable
 			var comment_lines = cache.documentLines.filter(function (item) {
 				return item.lineType === "comment" && item.syntax == "js";
@@ -1184,8 +1455,8 @@ var FoldTypes = function (application) {
 
 		}
 
-		var switchFoldEnabled = getFoldEnabled("switch", "js");
-		var switchCaseFoldEnabled = getFoldEnabled("switchCase", "js");
+		var switchFoldEnabled = hasJs && getFoldEnabled("switch", "js");
+		var switchCaseFoldEnabled = hasJs && getFoldEnabled("switchCase", "js");
 
 		if (switchFoldEnabled || switchCaseFoldEnabled) {
 			//fix switchCase and switchCaseInvalid
@@ -1237,14 +1508,13 @@ var FoldTypes = function (application) {
 							} else {
 								cache.documentLines[line_x]['lineType'] = "switchCase";
 							}
-							cache.documentLines[line_x]['lineCount'] = lineCount
+
 							setFoldInfo(line_x);
 						}
 					}
 				}
 			}
 		}
-
 
 		return cache.documentLines;
 	}
@@ -1266,8 +1536,8 @@ var FoldTypes = function (application) {
 				'switchCase': { enabled: self.getConfigurationSetting('switchCase') === "Yes" ? true : false },
 				'switchDefault': { enabled: self.getConfigurationSetting('switchDefault') === "Yes" ? true : false },
 				'try': { enabled: self.getConfigurationSetting('try') === "Yes" ? true : false },
-				'catch': { enabled: self.getConfigurationSetting('catch') === "Yes" ? true : false },
-				'finally': { enabled: self.getConfigurationSetting('finally') === "Yes" ? true : false },
+				'tryCatch': { enabled: self.getConfigurationSetting('tryCatch') === "Yes" ? true : false },
+				'tryFinally': { enabled: self.getConfigurationSetting('tryFinally') === "Yes" ? true : false },
 				'comment': { enabled: self.getConfigurationSetting('comment') === "Yes" ? true : false },
 				//javascript overrides
 				'jsClass': { enabled: self.getConfigurationSetting('jsClass') == "Yes" ? true : (self.getConfigurationSetting('jsClass') == "No" ? false : null) },
@@ -1284,8 +1554,8 @@ var FoldTypes = function (application) {
 				'jsSwitchCase': { enabled: self.getConfigurationSetting('jsSwitchCase') == "Yes" ? true : (self.getConfigurationSetting('jsSwitchCase') == "No" ? false : null) },
 				'jsSwitchDefault': { enabled: self.getConfigurationSetting('jsSwitchDefault') == "Yes" ? true : (self.getConfigurationSetting('jsSwitchDefault') == "No" ? false : null) },
 				'jsTry': { enabled: self.getConfigurationSetting('jsTry') == "Yes" ? true : (self.getConfigurationSetting('jsTry') == "No" ? false : null) },
-				'jsCatch': { enabled: self.getConfigurationSetting('jsCatch') == "Yes" ? true : (self.getConfigurationSetting('jsCatch') == "No" ? false : null) },
-				'jsFinally': { enabled: self.getConfigurationSetting('jsFinally') == "Yes" ? true : (self.getConfigurationSetting('jsFinally') == "No" ? false : null) },
+				'jsTryCatch': { enabled: self.getConfigurationSetting('jsTryCatch') == "Yes" ? true : (self.getConfigurationSetting('jsTryCatch') == "No" ? false : null) },
+				'jsTryFinally': { enabled: self.getConfigurationSetting('jsTryFinally') == "Yes" ? true : (self.getConfigurationSetting('jsTryFinally') == "No" ? false : null) },
 				'jsComment': { enabled: self.getConfigurationSetting('jsComment') == "Yes" ? true : (self.getConfigurationSetting('jsComment') == "No" ? false : null) },
 				//php
 				'phpClass': { enabled: self.getConfigurationSetting('phpClass') == "Yes" ? true : (self.getConfigurationSetting('phpClass') == "No" ? false : null) },
@@ -1301,8 +1571,8 @@ var FoldTypes = function (application) {
 				'phpSwitchCase': { enabled: self.getConfigurationSetting('phpSwitchCase') == "Yes" ? true : (self.getConfigurationSetting('phpSwitchCase') == "No" ? false : null) },
 				'phpSwitchDefault': { enabled: self.getConfigurationSetting('phpSwitchDefault') == "Yes" ? true : (self.getConfigurationSetting('phpSwitchDefault') == "No" ? false : null) },
 				'phpTry': { enabled: self.getConfigurationSetting('phpTry') == "Yes" ? true : (self.getConfigurationSetting('phpTry') == "No" ? false : null) },
-				'phpCatch': { enabled: self.getConfigurationSetting('phpCatch') == "Yes" ? true : (self.getConfigurationSetting('phpCatch') == "No" ? false : null) },
-				'phpFinally': { enabled: self.getConfigurationSetting('phpFinally') == "Yes" ? true : (self.getConfigurationSetting('phpFinally') == "No" ? false : null) },
+				'phpTryCatch': { enabled: self.getConfigurationSetting('phpTryCatch') == "Yes" ? true : (self.getConfigurationSetting('phpTryCatch') == "No" ? false : null) },
+				'phpTryFinally': { enabled: self.getConfigurationSetting('phpTryFinally') == "Yes" ? true : (self.getConfigurationSetting('phpTryFinally') == "No" ? false : null) },
 				'phpComment': { enabled: self.getConfigurationSetting('phpComment') == "Yes" ? true : (self.getConfigurationSetting('phpComment') == "No" ? false : null) },
 				//css
 				'css': { enabled: self.getConfigurationSetting('css', true) },
@@ -1310,10 +1580,16 @@ var FoldTypes = function (application) {
 		}
 		return cache.foldtypes;
 	}
-	function getFoldEnabled(lineType, syntax) {
+	function getFoldEnabled(lineType, syntax, index) {
 		var foldTypes = getEnabledFoldTypes();
 		var globalEnabled = isset(foldTypes[lineType]) && foldTypes[lineType]['enabled'] == true;
 		var syntaxEnabled = isset(foldTypes[syntax + ucwords(lineType)]) ? foldTypes[syntax + ucwords(lineType)]['enabled'] : null;
+		if (isset(index)) {
+			cache.documentLines[index]['isGlobalFoldEnabled'] = globalEnabled;
+			cache.documentLines[index]['isSyntaxFoldEnabled'] = syntaxEnabled;
+			cache.documentLines[index]['settingKey'] = syntax + ucwords(lineType);
+		}
+
 		var foldEnabled = syntaxEnabled !== null ? syntaxEnabled : globalEnabled;
 		return foldEnabled;
 	}
@@ -1322,19 +1598,15 @@ var FoldTypes = function (application) {
 		var validType = lineType !== "" && lineType !== "other";
 		if (validType) {
 			var syntax = cache.documentLines[index]['syntax'];
-			var foldEnabled = getFoldEnabled(lineType, syntax);
+			var foldEnabled = getFoldEnabled(lineType, syntax, index);
 		}
 		cache.documentLines[index]['isFoldType'] = validType ? true : false;
 		cache.documentLines[index]['isFoldEnabled'] = validType ? foldEnabled : false;
 	}
 
 	//fold
-	async function fold(lines, inner) {
-		inner = is_bool(inner) ? inner : false;
+	async function fold(lines) {
 		var linesTofold = getLinesToFold(lines);
-		if (inner) {
-			linesTofold = linesTofold.slice(1);
-		}
 		var lineNumbers = array_column(linesTofold, 'line');
 		if (lineNumbers.length > 0) {
 			await application.editorFoldLines(lineNumbers);
@@ -1365,6 +1637,11 @@ var FoldTypes = function (application) {
 		var cursorPosition = application.editorCursorPosition();
 		var parentLineNumber = getParentTopLineNumber();
 		var lines = getDocumentLines();
+
+		// debug(lines.filter(function (item) {
+		// 	return item.lineType == "if"
+		// }));
+
 		await unFold(lines); //need to reset all lines to open first
 		await fold(lines);
 		if (parentLineNumber == -1) {
@@ -1398,11 +1675,9 @@ var FoldTypes = function (application) {
 		log('commandFoldChildren');
 		var cursorPosition = application.editorCursorPosition();
 		var lines = getParentLines(true);
-		debug(lines.filter(function (item) {
-			return item.lineType == "other"
-		}))
+		debug(lines);
 		await unFold(lines); //need to reset all lines to open first
-		await fold(lines, true);
+		await fold(lines);
 		application.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
 	}
 	this.unFoldAll = async function () {
