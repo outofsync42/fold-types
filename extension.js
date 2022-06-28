@@ -560,7 +560,7 @@ var FoldTypes = function (application) {
 		}
 		return linesToFold;
 	}
-	function getParentTopLineNumber() {
+	function getParentTopLineNumber(lineType) {
 
 		if (isset(cache.parentTopLineNumber)) {
 			return cache.parentTopLineNumber;
@@ -575,7 +575,9 @@ var FoldTypes = function (application) {
 		var startingCharPosition = cursorPosition.character;
 		var braceCount = 1;
 
-		if (lines[lineNumber]['isFoldType'] == true) {
+		lineType = isset(lineType) ? lineType : null;
+
+		if (lines[lineNumber]['isFoldType'] == true && (lineType === null || in_array(lines[lineNumber]['lineType'], lineType) == true)) {
 			return lineNumber;
 		}
 
@@ -619,7 +621,7 @@ var FoldTypes = function (application) {
 		} while (braceCount > 0 && lineNumber >= 0);
 		lineNumber++;
 		//compensate for finding brace on next line of fold line
-		while (lineNumber >= 0 && lines[lineNumber]['isFoldType'] == false) {
+		while (lineNumber >= 0 && (lines[lineNumber]['isFoldType'] == false || (lineType !== null && is_true(lines[lineNumber]['defined']) == false && in_array(lines[lineNumber]['lineType'], lineType) == false))) {
 			lineNumber--;
 		}
 
@@ -686,10 +688,28 @@ var FoldTypes = function (application) {
 
 		cache.documentLines = new Array;
 
+		var foldLevel = 0;
+		var wsCheck = new RegExp('[^ ]', '');
 		for (var i in lines) {
 
 			var line_x = parseInt(i);
 			var line = lines[line_x];
+
+			line = str_replace("\t", " ", line); //make sure key words have spaces around them
+
+			var tabLevelArray = (line.match(wsCheck) || null)
+			var tabLevel = tabLevelArray == null ? 0 : line.indexOf(tabLevelArray[0]);
+
+			line = " " + line + " ~"; //add leading ws and eol
+
+			cache.documentLines[line_x] = {};
+			cache.documentLines[line_x]['lineType'] = "";
+			cache.documentLines[line_x]['line'] = line_x;
+			cache.documentLines[line_x]['syntax'] = syntax;
+			cache.documentLines[line_x]['tabLevel'] = tabLevel;
+			cache.documentLines[line_x]['text'] = "";
+			cache.documentLines[line_x]['isFoldType'] = false;
+			cache.documentLines[line_x]['isFoldEnabled'] = false;
 
 			if (fileType == 'php') {
 				if (line.indexOf('<?') > -1 || line.indexOf('<?php') > -1) {
@@ -703,13 +723,7 @@ var FoldTypes = function (application) {
 				}
 			}
 
-			cache.documentLines[line_x] = {};
-			cache.documentLines[line_x]['lineType'] = "";
-			cache.documentLines[line_x]['line'] = line_x;
-			cache.documentLines[line_x]['syntax'] = syntax;
-			cache.documentLines[line_x]['text'] = "";
-			cache.documentLines[line_x]['isFoldType'] = false;
-			cache.documentLines[line_x]['isFoldEnabled'] = false;
+
 
 			//php is weird and requires well formed where as javascript does not
 			if (isset(cache.well_formed_comment_block) == false) {
@@ -767,7 +781,7 @@ var FoldTypes = function (application) {
 				}
 			}
 
-			line = " " + trim(line) + " ~"; //add leading ws and eol
+
 
 			var newLine = "";
 
@@ -1072,6 +1086,23 @@ var FoldTypes = function (application) {
 					cache.documentLines[line_xx]['lineType'] = "for";
 					break;
 				} else if (check_line.indexOf(" function ") > -1 || check_line.indexOf(" get ") > -1 || check_line.indexOf(" set ") > -1) {
+					cache.documentLines[line_xx]['defined'] = false;
+					var char_xx = cache.documentLines[line_xx]['text'].indexOf(" function ");
+					if (char_xx > -1) {
+						cache.documentLines[line_xx]['defined'] = true;
+						//detect if declaration or anonymous
+						while (char_xx >= 0) {
+							if (char_xx === " ") {
+
+							} else if (char_xx == "=") {
+								break; //true
+							} else {
+								cache.documentLines[line_xx]['defined'] = false;
+								break;
+							}
+							char_xx--;
+						}
+					}
 					cache.documentLines[line_xx]['lineType'] = "method";
 					break;
 				} else if (check_line.indexOf(" do ") > -1) {
@@ -1091,6 +1122,7 @@ var FoldTypes = function (application) {
 					break;
 				} else if (check_line.indexOf(" class ") > -1) {
 					cache.documentLines[line_xx]['lineType'] = "class";
+					cache.documentLines[line_xx]['defined'] = true;
 					break;
 				} else if (check_line.indexOf(" return ") > -1) {
 					cache.documentLines[line_xx]['lineType'] = "object";
@@ -1102,6 +1134,7 @@ var FoldTypes = function (application) {
 					cache.documentLines[line_xx]['lineType'] = "object";
 					break;
 				} else if (found_key_line) {
+
 					cache.documentLines[line_xx]['lineType'] = "method"; //default to method
 					break;
 				}
@@ -1114,7 +1147,7 @@ var FoldTypes = function (application) {
 
 			//get total lines
 			var line_xxx = line_x;
-			let char_x = bracketStart; //unformatted row
+			let char_x = bracketStart;
 			var bracketCount = 0;
 			var code_data = new RegExp('[^\\{\\}\\ ~]', 'g');
 			var hasData = false; //default behavior requires data to fold
@@ -1155,14 +1188,6 @@ var FoldTypes = function (application) {
 
 	}
 	function cacheDocumentPHPLine(line_x) {
-
-
-		//comments already flagged in cacheDocumentLines();
-		if (cache.documentLines[line_x]['lineType'] == "comment") {
-			setFoldInfo(line_x);
-			return;
-		}
-
 
 		var bracketStart = cache.documentLines[line_x]['text'].lastIndexOf("{");
 		var braceStart = cache.documentLines[line_x]['text'].lastIndexOf("[");
@@ -1208,7 +1233,7 @@ var FoldTypes = function (application) {
 			if (lineCount > 2) {
 				cache.documentLines[collapseLine]['lineType'] = "array";
 				setFoldInfo(collapseLine);
-			} 
+			}
 
 
 		} else if (braceStart > -1 && braceStart > bracketStart) {
@@ -1333,6 +1358,24 @@ var FoldTypes = function (application) {
 					cache.documentLines[line_x]['lineType'] = "for";
 					break;
 				} else if (check_line.indexOf(" function ") > -1 || check_line.indexOf(" get ") > -1 || check_line.indexOf(" set ") > -1) {
+					cache.documentLines[line_xx]['defined'] = false;
+					var char_xx = cache.documentLines[line_xx]['text'].indexOf(" function ");
+					if (char_xx > -1) {
+						cache.documentLines[line_xx]['defined'] = true;
+						//detect if declaration or anonymous
+						while (char_xx >= 0) {
+							if (cache.documentLines[line_xx]['text'][char_xx] === " ") {
+
+							} else if (cache.documentLines[line_xx]['text'][char_xx] == "=") {
+								break; //true
+							} else {
+								cache.documentLines[line_xx]['defined'] = false;
+								break;
+							}
+
+							char_xx--;
+						}
+					}
 					cache.documentLines[line_x]['lineType'] = "method";
 					break;
 				} else if (check_line.indexOf(" do ") > -1) {
@@ -1352,6 +1395,7 @@ var FoldTypes = function (application) {
 					break;
 				} else if (check_line.indexOf(" class ") > -1 || check_line.indexOf(" trait ") > -1) {
 					cache.documentLines[line_x]['lineType'] = "class";
+					cache.documentLines[line_xx]['defined'] = true;
 					break;
 				} else if (check_line.indexOf(" return ") > -1) {
 					cache.documentLines[line_x]['lineType'] = "object";
@@ -1413,6 +1457,56 @@ var FoldTypes = function (application) {
 		}
 
 	}
+	function cacheDocumentCSSLine(line_x) {
+
+		cache.documentLines[line_x]['isFoldType'] = false;
+		cache.documentLines[line_x]['isFoldEnabled'] = false;
+
+		var bracketStart = cache.documentLines[line_x]['text'].lastIndexOf("{");
+		var lineCount = 0;
+
+		if (bracketStart > -1) {
+			cache.documentLines[line_x]['lineType'] = "block";
+			//get total lines
+			var line_xxx = line_x;
+			let char_x = bracketStart;
+			var bracketCount = 0;
+			var code_data = new RegExp('[^\\{\\}\\ ~]', 'g');
+			var hasData = false; //default behavior requires data to fold
+			while (line_xxx < cache.documentLines.length && (lineCount < 3 || hasData == false)) {
+				lineCount++;
+				let line = cache.documentLines[line_xxx]['text'];
+				while (char_x < line.length) {
+					if (line[char_x] == "{") {
+						bracketCount++;
+					}
+					if (line[char_x] == "}") {
+						bracketCount--;
+					}
+					if (bracketCount == 0) {
+						break;
+					}
+					char_x++;
+				}
+
+				if (bracketCount == 0) {
+					break;
+				}
+
+				hasData = hasData || (lineCount > 1 && (line.match(code_data) || []).length > 0);
+
+				char_x = 0;
+				line_xxx++;
+			}
+
+			//has data not required
+			if (lineCount < 3) {
+				cache.documentLines[line_x]['lineType'] = "";
+			}
+
+			setFoldInfo(line_x);
+		}
+	}
 	function getDocumentLines() {
 
 		if (isset(cache.documentLines)) {
@@ -1431,6 +1525,12 @@ var FoldTypes = function (application) {
 
 			let line_x = parseInt(i);
 
+			//comments already flagged in cacheDocumentLines();
+			if (cache.documentLines[line_x]['lineType'] == "comment") {
+				setFoldInfo(line_x);
+				continue;
+			}
+
 			var syntax = cache.documentLines[line_x]['syntax'];
 
 			if (syntax == "js") {
@@ -1444,12 +1544,17 @@ var FoldTypes = function (application) {
 				continue;
 			}
 
+			if (syntax == "css") {
+				cacheDocumentCSSLine(line_x);
+				continue;
+			}
+
 		}
 
 		var jsCommentFoldEnabled = hasJs && getFoldEnabled("comment", "js");
 
 		if (jsCommentFoldEnabled == true) {
-			//javascript has wierd rules that only comments above var and function declarations are foldable
+			//javascript has weird rules that only comments above var and function declarations are foldable
 			var comment_lines = cache.documentLines.filter(function (item) {
 				return item.lineType === "comment" && item.syntax == "js";
 			});
@@ -1586,7 +1691,7 @@ var FoldTypes = function (application) {
 				'php.tryFinally': { enabled: self.getConfigurationSetting('php.tryFinally') == "Yes" ? true : (self.getConfigurationSetting('php.tryFinally') == "No" ? false : null) },
 				'php.comment': { enabled: self.getConfigurationSetting('php.comment') == "Yes" ? true : (self.getConfigurationSetting('php.comment') == "No" ? false : null) },
 				//css
-				'css': { enabled: self.getConfigurationSetting('css', true) },
+				'css.block': { enabled: self.getConfigurationSetting('css.block') === "Yes" ? true : false },
 			};
 		}
 		return cache.foldTypes;
@@ -1648,9 +1753,9 @@ var FoldTypes = function (application) {
 		cache = {};
 		log('commandFoldAll')
 		var cursorPosition = application.editorCursorPosition();
-		var parentLineNumber = getParentTopLineNumber();
+		var parentLineNumber = getParentTopLineNumber(['method', 'class']);
 		var lines = getDocumentLines();
-
+		debug(parentLineNumber)
 		// debug(lines.filter(function (item) {
 		// 	return item.lineType == "if"
 		// }));

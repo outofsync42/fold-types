@@ -1,7 +1,7 @@
 {
 	"name": "fold-types",
 	"displayName": "Fold Types",
-	"description": "Fold on types (class, methods, etc..) instead of levels",
+	"description": "Fold types (class, methods, etc..) instead of levels",
 	"version": "1.0.0",
 	"publisher": "outofsync42",
 	"license": "MIT",
@@ -9,6 +9,8 @@
 		"vscode": "^1.67.0"
 	},
 	"categories": [
+		"Formatters",
+		"Visualization",
 		"Other"
 	],
 	"activationEvents": [
@@ -589,14 +591,14 @@
 				"type": "object",
 				"title": "CSS",
 				"properties": {
-					"fold-types.css": {
+					"fold-types.css.block": {
 						"type": "string",
 						"enum": [
 							"Yes",
 							"No"
 						],
 						"default": "Yes",
-						"description": "Global: Fold CSS"
+						"description": "CSS: Fold Block"
 					}
 				}
 			}
