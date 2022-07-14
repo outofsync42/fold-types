@@ -17,13 +17,14 @@
 		"onCommand:fold-types.fold-all",
 		"onCommand:fold-types.fold-parent",
 		"onCommand:fold-types.fold-children",
-		"onCommand:fold-types.unfold-all",
+		"onCommand:fold-types.fold-children-all-types",
 		"onCommand:fold-types.unfold-parent",
 		"onLanguage:javascript",
 		"onLanguage:typescript",
 		"onLanguage:javascriptreact",
 		"onLanguage:typescriptreact",
-		"onLanguage:php"
+		"onLanguage:php",
+		"onLanguage:html"
 	],
 	"main": "./extension.js",
 	"contributes": {
@@ -44,8 +45,8 @@
 				"when": "editorTextFocus && foldingEnabled"
 			},
 			{
-				"command": "fold-types.unfold-all",
-				"title": "UnFold Types All",
+				"command": "fold-types.fold-children-all-types",
+				"title": "Fold Types Children All Types (non restrictive)",
 				"when": "editorTextFocus && foldingEnabled"
 			},
 			{
@@ -72,7 +73,7 @@
 			},
 			{
 				"key": "",
-				"command": "fold-types.unfold-all",
+				"command": "fold-types.fold-children-all-types",
 				"when": "editorTextFocus && foldingEnabled"
 			},
 			{
@@ -95,6 +96,16 @@
 						"default": "No",
 						"description": "Global: Fold Classes",
 						"order": 1
+					},
+					"fold-types.global.interface": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No",
+							"Use Global"
+						],
+						"default": "Use Global",
+						"description": "Global: Fold interface declarations"
 					},
 					"fold-types.global.method": {
 						"type": "string",
@@ -238,6 +249,16 @@
 						],
 						"default": "Use Global",
 						"description": "JavaScript: Fold Classes"
+					},
+					"fold-types.js.interface": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No",
+							"Use Global"
+						],
+						"default": "Use Global",
+						"description": "JavaScript: Fold interface declarations"
 					},
 					"fold-types.js.method": {
 						"type": "string",
@@ -435,6 +456,16 @@
 						"default": "Use Global",
 						"description": "PHP: Fold Classes"
 					},
+					"fold-types.php.interface": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No",
+							"Use Global"
+						],
+						"default": "Use Global",
+						"description": "PHP: Fold interface declarations"
+					},
 					"fold-types.php.method": {
 						"type": "string",
 						"enum": [
@@ -599,6 +630,175 @@
 						],
 						"default": "Yes",
 						"description": "CSS: Fold Block"
+					}
+				}
+			},
+			{
+				"type": "object",
+				"title": "HTML",
+				"properties": {
+					"fold-types.html.head": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold <head> element"
+					},
+					"fold-types.html.body": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold <body> element"
+					},
+					"fold-types.html.div": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold all <div> elements"
+					},
+					"fold-types.html.section": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold all <section> elements"
+					},
+					"fold-types.html.ul": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold all <ul> elements"
+					},
+					"fold-types.html.a": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold all <a> elements"
+					},
+					"fold-types.html.select": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "Yes",
+						"description": "HTML: Fold all <select> elements"
+					},
+					"fold-types.html.button": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold all <button> elements"
+					},
+					"fold-types.html.table": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold all <table> elements"
+					},
+					"fold-types.html.tableTbody": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold all <table><tbody> elements"
+					},
+					"fold-types.html.tableThead": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold all <table><thead> elements"
+					},
+					"fold-types.html.tableTfoot": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold all <table><tfoot> elements"
+					},
+					"fold-types.html.tableTr": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "Yes",
+						"description": "HTML: Fold all <table><tr> elements"
+					},
+					"fold-types.html.tableTd": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "Yes",
+						"description": "HTML: Fold all <table><td> and <table><th> elements"
+					},
+					"fold-types.html.script": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold all <script> elements"
+					},
+					"fold-types.html.style": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "HTML: Fold all <style> elements"
+					},
+					"fold-types.html.idAttribute": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "Yes",
+						"description": "HTML: Special option to fold elements with ID attributes set"
+					},
+					"fold-types.html.comment": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No",
+							"Use Global"
+						],
+						"default": "Use Global",
+						"description": "HTML: Fold comments."
 					}
 				}
 			}
