@@ -7,7 +7,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "GitHub",
-		"url": "https://github.com/outofsync42/fold-type"
+		"url": "https://github.com/outofsync42/fold-types"
 	},
 	"icon": "logo.png",
 	"engines": {
@@ -631,5 +631,11 @@
 		"eslint-plugin-import": "^2.17.2",
 		"mocha": "^2.3.3",
 		"vscode": "^1.0.0"
+	},
+	"__metadata": {
+		"id": "779e87e5-e336-479f-8253-5baceb825976",
+		"publisherDisplayName": "outofsync42",
+		"publisherId": "5b357866-64ca-4aee-92e0-be55ff869996",
+		"isPreReleaseVersion": false
 	}
 }
