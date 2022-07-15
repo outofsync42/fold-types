@@ -39,6 +39,11 @@ While this has been heavily tested to catch all patterns, there may be some outl
 
 You can and should still use the existing **editor.unfoldAll** command to unfold the entire document.
 
+## How to use
+Either type "Fold Types" in the command palette to find the commands but its recommended you assign hot keys.
+
+![Command Palette](https://raw.githubusercontent.com/outofsync42/fold-types/master/images/comand-palette.png)
+
 # Configuration Settings
 
 Fold Types comes configured with a few enabled types that I feel to be the most intuitive items to be folded but almost any type can configured to be folded or ignored based on your needs.
