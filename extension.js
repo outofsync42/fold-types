@@ -791,7 +791,7 @@ var FoldTypes = function (application) {
 
 		var fileType = application.documentType();
 		var syntax = null;
-		if (in_array(fileType, ['js','ts', 'jsx', 'tsx']) == true) {
+		if (in_array(fileType, ['js', 'ts', 'jsx', 'tsx']) == true) {
 			syntax = 'js';
 		}
 		if (in_array(fileType, ['css']) == true) {
@@ -1066,7 +1066,7 @@ var FoldTypes = function (application) {
 							//keep the last open tag
 							let lastTag = tags[tags.length - 1];
 							let lastTagPos = tagsPos[tagsPos.length - 1];
-							if (newLine.indexOf('id = ""', lastTagPos) > -1) {
+							if (newLine.indexOf('id = ""', lastTagPos) > -1 && in_array(lastTag, elementVoids) == false) {
 								cache.documentLines[line_x]['idAttribute'] = true;
 							}
 							cache.documentLines[line_x]['elementTag'] = lastTag == 'th' ? 'td' : lastTag;
@@ -1144,7 +1144,7 @@ var FoldTypes = function (application) {
 
 		}
 
-		// console.log(cache.documentLines)
+		console.log(cache.documentLines)
 	}
 	function cacheDocumentJsLine(line_x) {
 
