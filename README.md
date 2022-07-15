@@ -2,11 +2,11 @@
 
 Fold Types is a VSCode extension that provides commands to fold enabled types (classes, functions, arrays, etc...) recursively from any point in the document rather than folding levels to provide a more intuitive method of folding. Types can be enabled or disabled in the extension settings based on syntax (php, js, etc..) to match your desired folding needs.
 
-When calling a fold-type command, enabled types will fold recursively leaving all other disabled types un-collapsed providing faster navigation to code that you are looking for. You can fold recursively throughout the entire document or from within a single parent that will only fold enabled types recursively inside the parent leaving everything out side of it untouched.
+When calling a fold-type command, enabled types will fold recursively leaving all other disabled types un-collapsed providing faster navigation to code that you are looking for. You can fold recursively throughout the entire document (fold all) or from within a single parent (fold parent/fold children) that will only fold enabled types recursively inside the parent leaving everything out side of it untouched.
 
 # Supported Languages
 
-There is no VSCode API to get fold points or types so syntax checking and pattern matching are done manually. As a result, only certain languages (the ones I use) are currently supported. 
+There is no VSCode API to get fold points or types so syntax checking and pattern matching are all done manually. As a result, only certain languages (the ones I use) are currently supported. 
 
 - HTML
 - CSS
