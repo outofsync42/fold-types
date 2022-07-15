@@ -93,16 +93,6 @@ function in_array(needle, haystack) {
 	}
 	return false;
 }
-function is_class_object(object) {
-	if (isset(object) && typeof object == 'object'
-		&& isset(object.constructor)
-		&& isset(object.constructor.name)
-		&& object.constructor.name != 'Object'
-		&& object.constructor.name != 'Array') {
-		return true;
-	}
-	return false;
-}
 function array_column(array, columnName) {
 	var table;
 	if (is_string(array)) {
@@ -192,18 +182,6 @@ function str_replace(find, replace, text) {
 
 	return text;
 }
-function ucwords(str, force) {
-
-	if (is_true(force)) {
-		str = strtolower(str);
-	}
-
-	var value = (str + '').replace(/^([a-z\u00E0-\u00FC])|\s+([a-z\u00E0-\u00FC])/g, function ($1) {
-		return $1.toUpperCase();
-	});
-
-	return value;
-}
 function length(object) {
 
 	var x = 0;
@@ -234,25 +212,7 @@ function length(object) {
 
 	return x;
 }
-function copyArray(object) {
-	return mergeArray(is_array(object, true) ? [] : {}, object)
-}
-function mergeArray(originalObject, newObject) {
-	if (is_array(originalObject) == false) {
-		originalObject = is_array(newObject, true) ? [] : {};
-	}
-	for (var i in newObject) {
-		if (is_array(newObject[i]) == true && is_class_object(newObject[i]) == false) {
-			originalObject[i] = mergeArray(isset(originalObject[i]) ? originalObject[i] : (is_array(newObject[i], true) ? [] : {}), newObject[i]);
-		} else {
-			originalObject[i] = newObject[i];
-		}
-	}
-	return originalObject;
-}
 
-var debug = console.log;
-var log = console.log;
 
 function Extend(self, parent, p1, p2, p3) {
 	//because prototype is ugly
@@ -692,6 +652,9 @@ var FoldTypes = function (application) {
 		return parentLines;
 	}
 
+	let elementTypes = ['head', 'body', 'div', 'ul', 'a', 'select', 'button', 'script', 'style', 'table', 'tbody', 'thead', 'tfoot', 'tfoot', 'tfoot', 'tr', 'td', 'th'];
+	let elementVoids = ['area', 'base', 'br', 'col', 'command', 'embed', 'hr', 'img', 'input', 'keygen', 'link', 'meta', 'param', 'path', 'source', 'track', 'wbr'];
+
 	function getDocumentLines() {
 
 		if (isset(cache.documentLines)) {
@@ -993,7 +956,7 @@ var FoldTypes = function (application) {
 			}
 
 			cache.documentLines[line_x]['line'] = line_x;
-			
+
 			cache.documentLines[line_x]['level'] = 0;
 			cache.documentLines[line_x]['lineType'] = "";
 			cache.documentLines[line_x]['text'] = "";
@@ -1036,7 +999,7 @@ var FoldTypes = function (application) {
 					cache.php_html_css = true;
 					syntax = 'html';
 				}
-				
+
 				if (syntax == "php") {
 					if ((isset(cache.php_last_type) && cache.php_last_type == 'html') || trim(newLine).indexOf('<') === 0) {
 						syntax = 'html';
@@ -1048,7 +1011,7 @@ var FoldTypes = function (application) {
 						cache.documentLines[line_x]['idAttribute'] = false;
 						cache.documentLines[line_x]['elementTagPos'] = null;
 						cache.documentLines[line_x]['elementTag'] = "";
-						
+
 						let foundOpenTag = false;
 						let isTag = false;
 						let isComment = false;
@@ -1075,7 +1038,7 @@ var FoldTypes = function (application) {
 									isTag = false;
 									foundOpenTag = true;
 								}
-								
+
 								if (isTag && newLine[charX] !== '<') {
 									tag += newLine[charX];
 								}
@@ -1110,7 +1073,7 @@ var FoldTypes = function (application) {
 					}
 
 				}
-				if(line_x==10){
+				if (line_x == 10) {
 					console.log(syntax);
 				}
 			}
@@ -1532,7 +1495,7 @@ var FoldTypes = function (application) {
 						}
 
 						if (text[char_x - 1] == "=" && text[char_x] == ">" || text[char_x] == "[") {
-							cache.documentLines[line_xx]['lineType'] = "arrayObjectParam"; //method
+							cache.documentLines[line_xx]['lineType'] = "arrayObjectParam";
 							break;
 						}
 						if (text[char_x] == "=" || ((text[char_x] == ":" || text[char_x] == "?") && text.indexOf(":") > -1 && text.indexOf("?") > -1)) {
@@ -1815,10 +1778,6 @@ var FoldTypes = function (application) {
 			setFoldInfo(line_x);
 		}
 	}
-
-	let elementTypes = ['head', 'body', 'div', 'ul', 'a', 'select', 'button', 'script', 'style', 'table', 'tbody', 'thead', 'tfoot', 'tfoot', 'tfoot', 'tr', 'td', 'th'];
-	let elementVoids = ['area', 'base', 'br', 'col', 'command', 'embed', 'hr', 'img', 'input', 'keygen', 'link', 'meta', 'param', 'path', 'source', 'track', 'wbr'];
-
 	function cacheDocumentHtmlLine(line_x) {
 
 		//add id="" fold="" checking
@@ -1921,65 +1880,44 @@ var FoldTypes = function (application) {
 	function getEnabledFoldTypes() {
 		if (isset(cache.foldTypes) == false) {
 			cache.foldTypes = {
-				//global
-				'class': { enabled: self.getConfigurationSetting('global.class') === "Yes" ? true : false },
-				'interface': { enabled: self.getConfigurationSetting('global.interface') === "Yes" ? true : false },
-				'method': { enabled: self.getConfigurationSetting('global.method') === "Yes" ? true : false },
-				'object': { enabled: self.getConfigurationSetting('global.object') === "Yes" ? true : false },
-				'objectFunctionParam': { enabled: self.getConfigurationSetting('global.object') === "Yes" ? true : false },
-				'objectObjectParam': { enabled: self.getConfigurationSetting('global.object') === "Yes" ? true : false },
-				'array': { enabled: self.getConfigurationSetting('global.array') === "Yes" ? true : false },
-				'arrayFunctionParam': { enabled: self.getConfigurationSetting('global.array') === "Yes" ? true : false },
-				'arrayObjectParam': { enabled: self.getConfigurationSetting('global.array') === "Yes" ? true : false },
-				'while': { enabled: self.getConfigurationSetting('global.while') === "Yes" ? true : false },
-				'for': { enabled: self.getConfigurationSetting('global.for') === "Yes" ? true : false },
-				'if': { enabled: self.getConfigurationSetting('global.if') === "Yes" ? true : false },
-				'else': { enabled: self.getConfigurationSetting('global.else') === "Yes" ? true : false },
-				'switch': { enabled: self.getConfigurationSetting('global.switch') === "Yes" ? true : false },
-				'switchCase': { enabled: self.getConfigurationSetting('global.switchCase') === "Yes" ? true : false },
-				'switchDefault': { enabled: self.getConfigurationSetting('global.switchDefault') === "Yes" ? true : false },
-				'try': { enabled: self.getConfigurationSetting('global.try') === "Yes" ? true : false },
-				'tryCatch': { enabled: self.getConfigurationSetting('global.tryCatch') === "Yes" ? true : false },
-				'tryFinally': { enabled: self.getConfigurationSetting('global.tryFinally') === "Yes" ? true : false },
-				'comment': { enabled: self.getConfigurationSetting('global.comment') === "Yes" ? true : false },
 				//javascript overrides
-				'js.class': { enabled: self.getConfigurationSetting('js.class') == "Yes" ? true : (self.getConfigurationSetting('js.class') == "No" ? false : null) },
-				'js.interface': { enabled: self.getConfigurationSetting('js.interface') == "Yes" ? true : (self.getConfigurationSetting('js.interface') == "No" ? false : null) },
-				'js.method': { enabled: self.getConfigurationSetting('js.method') == "Yes" ? true : (self.getConfigurationSetting('js.method') == "No" ? false : null) },
-				'js.object': { enabled: self.getConfigurationSetting('js.object') == "Yes" ? true : (self.getConfigurationSetting('js.object') == "No" ? false : null) },
-				'js.objectFunctionParam': { enabled: self.getConfigurationSetting('js.objectFunctionParam') == "Yes" ? true : (self.getConfigurationSetting('js.objectFunctionParam') == "No" ? false : null) },
-				'js.objectObjectParam': { enabled: self.getConfigurationSetting('js.objectObjectParam') == "Yes" ? true : (self.getConfigurationSetting('js.objectObjectParam') == "No" ? false : null) },
-				'js.array': { enabled: self.getConfigurationSetting('js.array') == "Yes" ? true : (self.getConfigurationSetting('js.array') == "No" ? false : null) },
-				'js.arrayParam': { enabled: self.getConfigurationSetting('js.arrayParam') == "Yes" ? true : (self.getConfigurationSetting('js.arrayParam') == "No" ? false : null) },
-				'js.while': { enabled: self.getConfigurationSetting('js.while') == "Yes" ? true : (self.getConfigurationSetting('js.while') == "No" ? false : null) },
-				'js.for': { enabled: self.getConfigurationSetting('js.for') == "Yes" ? true : (self.getConfigurationSetting('js.for') == "No" ? false : null) },
-				'js.if': { enabled: self.getConfigurationSetting('js.if') == "Yes" ? true : (self.getConfigurationSetting('js.if') == "No" ? false : null) },
-				'js.else': { enabled: self.getConfigurationSetting('js.else') == "Yes" ? true : (self.getConfigurationSetting('js.else') == "No" ? false : null) },
-				'js.switch': { enabled: self.getConfigurationSetting('js.switch') == "Yes" ? true : (self.getConfigurationSetting('js.switch') == "No" ? false : null) },
-				'js.switchCase': { enabled: self.getConfigurationSetting('js.switchCase') == "Yes" ? true : (self.getConfigurationSetting('js.switchCase') == "No" ? false : null) },
-				'js.switchDefault': { enabled: self.getConfigurationSetting('js.switchDefault') == "Yes" ? true : (self.getConfigurationSetting('js.switchDefault') == "No" ? false : null) },
-				'js.try': { enabled: self.getConfigurationSetting('js.try') == "Yes" ? true : (self.getConfigurationSetting('js.try') == "No" ? false : null) },
-				'js.tryCatch': { enabled: self.getConfigurationSetting('js.tryCatch') == "Yes" ? true : (self.getConfigurationSetting('js.tryCatch') == "No" ? false : null) },
-				'js.tryFinally': { enabled: self.getConfigurationSetting('js.tryFinally') == "Yes" ? true : (self.getConfigurationSetting('js.tryFinally') == "No" ? false : null) },
-				'js.comment': { enabled: self.getConfigurationSetting('js.comment') == "Yes" ? true : (self.getConfigurationSetting('js.comment') == "No" ? false : null) },
+				'js.class': { enabled: self.getConfigurationSetting('js.class') == "Yes" ? true : false },
+				'js.interface': { enabled: self.getConfigurationSetting('js.interface') == "Yes" ? true : false },
+				'js.method': { enabled: self.getConfigurationSetting('js.method') == "Yes" ? true : false },
+				'js.object': { enabled: self.getConfigurationSetting('js.object') == "Yes" ? true : false },
+				'js.objectFunctionParam': { enabled: self.getConfigurationSetting('js.objectFunctionParam') == "Yes" ? true : false },
+				'js.objectObjectParam': { enabled: self.getConfigurationSetting('js.objectObjectParam') == "Yes" ? true :false },
+				'js.array': { enabled: self.getConfigurationSetting('js.array') == "Yes" ? true : false },
+				'js.arrayParam': { enabled: self.getConfigurationSetting('js.arrayParam') == "Yes" ? true :false },
+				'js.while': { enabled: self.getConfigurationSetting('js.while') == "Yes" ? true : false },
+				'js.for': { enabled: self.getConfigurationSetting('js.for') == "Yes" ? true :false },
+				'js.if': { enabled: self.getConfigurationSetting('js.if') == "Yes" ? true : false },
+				'js.else': { enabled: self.getConfigurationSetting('js.else') == "Yes" ? true :false },
+				'js.switch': { enabled: self.getConfigurationSetting('js.switch') == "Yes" ? true : false },
+				'js.switchCase': { enabled: self.getConfigurationSetting('js.switchCase') == "Yes" ? true :false },
+				'js.switchDefault': { enabled: self.getConfigurationSetting('js.switchDefault') == "Yes" ? true : false },
+				'js.try': { enabled: self.getConfigurationSetting('js.try') == "Yes" ? true : false },
+				'js.tryCatch': { enabled: self.getConfigurationSetting('js.tryCatch') == "Yes" ? true : false },
+				'js.tryFinally': { enabled: self.getConfigurationSetting('js.tryFinally') == "Yes" ? true : false },
+				'js.comment': { enabled: self.getConfigurationSetting('js.comment') == "Yes" ? true : false },
 				//php
-				'php.class': { enabled: self.getConfigurationSetting('php.class') == "Yes" ? true : (self.getConfigurationSetting('php.class') == "No" ? false : null) },
-				'php.interface': { enabled: self.getConfigurationSetting('php.interface') == "Yes" ? true : (self.getConfigurationSetting('php.interface') == "No" ? false : null) },
-				'php.method': { enabled: self.getConfigurationSetting('php.method') == "Yes" ? true : (self.getConfigurationSetting('php.method') == "No" ? false : null) },
-				'php.array': { enabled: self.getConfigurationSetting('php.array') == "Yes" ? true : (self.getConfigurationSetting('php.array') == "No" ? false : null) },
-				'php.arrayFunctionParam': { enabled: self.getConfigurationSetting('php.arrayFunctionParam') == "Yes" ? true : (self.getConfigurationSetting('php.arrayFunctionParam') == "No" ? false : null) },
-				'php.arrayObjectParam': { enabled: self.getConfigurationSetting('php.arrayObjectParam') == "Yes" ? true : (self.getConfigurationSetting('php.arrayObjectParam') == "No" ? false : null) },
-				'php.while': { enabled: self.getConfigurationSetting('php.while') == "Yes" ? true : (self.getConfigurationSetting('php.while') == "No" ? false : null) },
-				'php.for': { enabled: self.getConfigurationSetting('php.for') == "Yes" ? true : (self.getConfigurationSetting('php.for') == "No" ? false : null) },
-				'php.if': { enabled: self.getConfigurationSetting('php.if') == "Yes" ? true : (self.getConfigurationSetting('php.if') == "No" ? false : null) },
-				'php.else': { enabled: self.getConfigurationSetting('php.else') == "Yes" ? true : (self.getConfigurationSetting('php.else') == "No" ? false : null) },
-				'php.switch': { enabled: self.getConfigurationSetting('php.switch') == "Yes" ? true : (self.getConfigurationSetting('php.switch') == "No" ? false : null) },
-				'php.switchCase': { enabled: self.getConfigurationSetting('php.switchCase') == "Yes" ? true : (self.getConfigurationSetting('php.switchCase') == "No" ? false : null) },
-				'php.switchDefault': { enabled: self.getConfigurationSetting('php.switchDefault') == "Yes" ? true : (self.getConfigurationSetting('php.switchDefault') == "No" ? false : null) },
-				'php.try': { enabled: self.getConfigurationSetting('php.try') == "Yes" ? true : (self.getConfigurationSetting('php.try') == "No" ? false : null) },
-				'php.tryCatch': { enabled: self.getConfigurationSetting('php.tryCatch') == "Yes" ? true : (self.getConfigurationSetting('php.tryCatch') == "No" ? false : null) },
-				'php.tryFinally': { enabled: self.getConfigurationSetting('php.tryFinally') == "Yes" ? true : (self.getConfigurationSetting('php.tryFinally') == "No" ? false : null) },
-				'php.comment': { enabled: self.getConfigurationSetting('php.comment') == "Yes" ? true : (self.getConfigurationSetting('php.comment') == "No" ? false : null) },
+				'php.class': { enabled: self.getConfigurationSetting('php.class') == "Yes" ? true : false },
+				'php.interface': { enabled: self.getConfigurationSetting('php.interface') == "Yes" ? true :false },
+				'php.method': { enabled: self.getConfigurationSetting('php.method') == "Yes" ? true : false },
+				'php.array': { enabled: self.getConfigurationSetting('php.array') == "Yes" ? true :false },
+				'php.arrayFunctionParam': { enabled: self.getConfigurationSetting('php.arrayFunctionParam') == "Yes" ? true : false },
+				'php.arrayObjectParam': { enabled: self.getConfigurationSetting('php.arrayObjectParam') == "Yes" ? true : false },
+				'php.while': { enabled: self.getConfigurationSetting('php.while') == "Yes" ? true : false },
+				'php.for': { enabled: self.getConfigurationSetting('php.for') == "Yes" ? true :false },
+				'php.if': { enabled: self.getConfigurationSetting('php.if') == "Yes" ? true : false },
+				'php.else': { enabled: self.getConfigurationSetting('php.else') == "Yes" ? true : false },
+				'php.switch': { enabled: self.getConfigurationSetting('php.switch') == "Yes" ? true : false },
+				'php.switchCase': { enabled: self.getConfigurationSetting('php.switchCase') == "Yes" ? true : false },
+				'php.switchDefault': { enabled: self.getConfigurationSetting('php.switchDefault') == "Yes" ? true : false },
+				'php.try': { enabled: self.getConfigurationSetting('php.try') == "Yes" ? true : false },
+				'php.tryCatch': { enabled: self.getConfigurationSetting('php.tryCatch') == "Yes" ? true : false },
+				'php.tryFinally': { enabled: self.getConfigurationSetting('php.tryFinally') == "Yes" ? true :false },
+				'php.comment': { enabled: self.getConfigurationSetting('php.comment') == "Yes" ? true : false },
 				//css
 				'css.block': { enabled: self.getConfigurationSetting('css.block') === "Yes" ? true : false },
 				//HTML
@@ -1999,22 +1937,20 @@ var FoldTypes = function (application) {
 				'html.script': { enabled: self.getConfigurationSetting('html.script') === "Yes" ? true : false },
 				'html.style': { enabled: self.getConfigurationSetting('html.style') === "Yes" ? true : false },
 				'html.idAttribute': { enabled: self.getConfigurationSetting('html.idAttribute') === "Yes" ? true : false },
-				'html.comment': { enabled: self.getConfigurationSetting('html.comment') == "Yes" ? true : (self.getConfigurationSetting('html.comment') == "No" ? false : null) },
+				'html.comment': { enabled: self.getConfigurationSetting('html.comment') == "Yes" ? true : false },
 			};
 		}
 		return cache.foldTypes;
 	}
 	function getFoldEnabled(lineType, syntax, index) {
 		var foldTypes = getEnabledFoldTypes();
-		var globalEnabled = isset(foldTypes[lineType]) && foldTypes[lineType]['enabled'] == true;
 		var settingKey = syntax + "." + lineType;
 		var syntaxEnabled = isset(foldTypes[settingKey]) ? foldTypes[settingKey]['enabled'] : null;
 		if (isset(index)) {
-			cache.documentLines[index]['isGlobalFoldEnabled'] = globalEnabled;
 			cache.documentLines[index]['isSyntaxFoldEnabled'] = syntaxEnabled;
 			cache.documentLines[index]['settingKey'] = settingKey;
 		}
-		var foldEnabled = syntaxEnabled !== null ? syntaxEnabled : globalEnabled;
+		var foldEnabled = syntaxEnabled !== null ? syntaxEnabled : false;
 		return foldEnabled;
 	}
 	function setFoldInfo(index) {
@@ -2105,10 +2041,13 @@ var FoldTypes = function (application) {
 		let parentLineNumber = getParentTopLineNumber(); //get first fold type
 		var cursorPosition = application.editorCursorPosition();
 		var lines = getParentLines();
+		var firstIndex = Object.keys(lines)[0];
+
+		lines[firstIndex]['isFoldEnabled'] = true; //fold parent should fold the parent regardless of settings
 		await unFold(lines); //need to reset all lines to open first
 		await fold(lines);
 
-		if (parentLineNumber == -1 || lines[0]['isFoldEnabled'] == false) {
+		if (parentLineNumber == -1 || lines[firstIndex]['isFoldEnabled'] == false) {
 			application.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
 		} else {
 			application.editorSetCursorPosition(parentLineNumber); //place cursor at start of parent

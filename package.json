@@ -5,6 +5,11 @@
 	"version": "1.0.0",
 	"publisher": "outofsync42",
 	"license": "MIT",
+	"repository": {
+		"type": "GitHub",
+		"url": "https://github.com/outofsync42/fold-type"
+	},
+	"icon": "logo.png",
 	"engines": {
 		"vscode": "^1.67.0"
 	},
@@ -85,199 +90,42 @@
 		"configuration": [
 			{
 				"type": "object",
-				"title": "Global",
-				"properties": {
-					"fold-types.global.class": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Fold Classes",
-						"order": 1
-					},
-					"fold-types.global.interface": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No",
-							"Use Global"
-						],
-						"default": "Use Global",
-						"description": "Global: Fold interface declarations"
-					},
-					"fold-types.global.method": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "Yes",
-						"description": "Global: Fold Methods",
-						"order": 1
-					},
-					"fold-types.global.object": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "Yes",
-						"description": "Global: Fold Objects"
-					},
-					"fold-types.global.array": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "Yes",
-						"description": "Global: Fold Arrays"
-					},
-					"fold-types.global.while": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Fold While / Do"
-					},
-					"fold-types.global.if": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Fold If"
-					},
-					"fold-types.global.else": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Fold Else"
-					},
-					"fold-types.global.for": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Fold For / Foreach"
-					},
-					"fold-types.global.switch": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Fold Switch"
-					},
-					"fold-types.global.switchCase": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Fold Switch Case"
-					},
-					"fold-types.global.switchDefault": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Fold Switch Default"
-					},
-					"fold-types.global.try": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Try"
-					},
-					"fold-types.global.tryCatch": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Catch"
-					},
-					"fold-types.global.tryFinally": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Finally"
-					},
-					"fold-types.global.comment": {
-						"type": "string",
-						"enum": [
-							"Yes",
-							"No"
-						],
-						"default": "No",
-						"description": "Global: Fold Comments"
-					}
-				}
-			},
-			{
-				"type": "object",
 				"title": "Javascript",
 				"properties": {
 					"fold-types.js.class": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Fold Classes"
 					},
 					"fold-types.js.interface": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Fold interface declarations"
 					},
 					"fold-types.js.method": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "Yes",
 						"description": "JavaScript: Fold Methods"
 					},
 					"fold-types.js.object": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "Yes",
 						"description": "JavaScript: Fold Objects"
 					},
 					"fold-types.js.objectFunctionParam": {
@@ -287,157 +135,142 @@
 							"No",
 							"Use Global"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Fold objects when used as parameter in function calls"
 					},
 					"fold-types.js.objectObjectParam": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "Yes",
 						"description": "JavaScript: Fold objects when set inside a parent object"
 					},
 					"fold-types.js.array": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "Yes",
 						"description": "JavaScript: Fold Arrays"
 					},
 					"fold-types.js.arrayFunctionParam": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Fold arrays when used as parameter in function calls"
 					},
 					"fold-types.js.arrayObjectParam": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "Yes",
 						"description": "JavaScript: Fold arrays when set inside a parent object"
 					},
 					"fold-types.js.while": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Fold While / Do"
 					},
 					"fold-types.js.if": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Fold If"
 					},
 					"fold-types.js.else": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Fold Else"
 					},
 					"fold-types.js.for": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Fold For / Foreach"
 					},
 					"fold-types.js.switch": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Fold Switch"
 					},
 					"fold-types.js.switchCase": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "Yes",
 						"description": "JavaScript: Fold Switch Case"
 					},
 					"fold-types.js.switchDefault": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Fold Switch Default"
 					},
 					"fold-types.js.try": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Try"
 					},
 					"fold-types.js.tryCatch": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Catch"
 					},
 					"fold-types.js.tryFinally": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "JavaScript: Finally"
 					},
 					"fold-types.js.comment": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "Global: Fold Comments"
 					}
 				}
@@ -450,186 +283,154 @@
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Fold Classes"
 					},
 					"fold-types.php.interface": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Fold interface declarations"
 					},
 					"fold-types.php.method": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "Yes",
 						"description": "PHP: Fold Methods"
 					},
 					"fold-types.php.array": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "Yes",
 						"description": "PHP: Fold Arrays"
 					},
 					"fold-types.php.arrayFunctionParam": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Fold arrays when used as parameter in function calls"
 					},
 					"fold-types.php.arrayObjectParam": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "Yes",
 						"description": "PHP: Fold arrays when set inside a parent object"
 					},
 					"fold-types.php.while": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Fold While / Do"
 					},
 					"fold-types.php.if": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Fold If"
 					},
 					"fold-types.php.else": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Fold Else"
 					},
 					"fold-types.php.for": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Fold For / Foreach"
 					},
 					"fold-types.php.switch": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Fold Switch"
 					},
 					"fold-types.php.switchCase": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "Yrd",
 						"description": "PHP: Fold Switch Case"
 					},
 					"fold-types.php.switchDefault": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Fold Switch Default"
 					},
 					"fold-types.php.try": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Try"
 					},
 					"fold-types.php.tryCatch": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Catch"
 					},
 					"fold-types.php.tryFinally": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "PHP: Finally"
 					},
 					"fold-types.php.comment": {
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
-						],
-						"default": "Use Global",
-						"description": "PHP: Fold Comments"
-					}
-				}
-			},
-			{
-				"type": "object",
-				"title": "CSS",
-				"properties": {
-					"fold-types.css.block": {
-						"type": "string",
-						"enum": [
-							"Yes",
 							"No"
 						],
-						"default": "Yes",
-						"description": "CSS: Fold Block"
+						"default": "No",
+						"description": "PHP: Fold Comments"
 					}
 				}
 			},
@@ -799,6 +600,21 @@
 						],
 						"default": "Use Global",
 						"description": "HTML: Fold comments."
+					}
+				}
+			},
+			{
+				"type": "object",
+				"title": "CSS",
+				"properties": {
+					"fold-types.css.block": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "Yes",
+						"description": "CSS: Fold Block"
 					}
 				}
 			}
