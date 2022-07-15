@@ -18,7 +18,7 @@ While this has been heavily tested to catch all patterns, there may be some outl
 
 # Commands
 
-## Fold
+### Fold
 <dl>
   <dt><b>fold-types.fold-all</b></dt>
   <dd>Folds all enabled types recursively through out the entire document.</dd>
@@ -30,7 +30,7 @@ While this has been heavily tested to catch all patterns, there may be some outl
   <dd>Special command to ignore rules and fold all children recursively regardless of type leaving the parent block un-collapsed.</dd>
 </dl>
 
-## Unfold
+### Unfold
 
 <dl>
   <dt><b>fold-types.unfold-parent</b></dt>
@@ -43,7 +43,7 @@ You can and should still use the existing **editor.unfoldAll** command to unfold
 
 Fold Types comes configured with a few enabled types that I feel to be the most intuitive items to be folded but almost any type can configured to be folded or ignored based on your needs.
 
-## JS
+### JS
 
 - fold-types.js.class	
 - fold-types.js.method <mark>(default enabled)</mark>
@@ -66,7 +66,7 @@ Fold Types comes configured with a few enabled types that I feel to be the most 
 - fold-types.js.tryFinally
 - fold-types.js.comment
 
-## PHP
+### PHP
 
 - fold-types.php.class	
 - fold-types.php.method <mark>(default enabled)</mark>
@@ -86,7 +86,7 @@ Fold Types comes configured with a few enabled types that I feel to be the most 
 - fold-types.php.tryFinally
 - fold-types.php.comment
 
-## HTML
+### HTML
 
 Only the most common tags have been included but if there are some that the community wants they can be added later.
 
@@ -109,11 +109,11 @@ Only the most common tags have been included but if there are some that the comm
 - fold-types.html.comment
 - fold-types.html.idAttribute <mark>(default enabled)</mark> ***(Special: Folds any tag that has an id="" attribute set)***
 
-## CSS
+### CSS
 
 - fold-types.css.block <mark>(default enabled)</mark>
 
-## How to configure settings
+### How to configure settings
 The easiest way to configure enabled types is to right click on the extension in your extensions list and select "Extension Settings".
 
 ![Right Click Extension](https://raw.githubusercontent.com/outofsync42/fold-type/master/images/right-click-extension.png)
