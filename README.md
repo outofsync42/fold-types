@@ -41,7 +41,11 @@ You can and should still use the existing **editor.unfoldAll** command to unfold
 
 # Configuration Settings
 
-Fold Types comes configured with a few enabled types that are designated to be the most intuitive items to be folded but almost any type can configured to be folded or ignored.
+Fold Types comes configured with a few enabled types that I feel to be the most intuitive items to be folded but almost any type can configured to be folded or ignored based on your needs.
+The easiest way to configure enabled types is to right click on the extension in your extensions list and select "Extension Settings".
+
+![Right Click Extension](https://raw.githubusercontent.com/outofsync42/fold-type/master/images/right-click-extension.png)
+![Extension Settings](https://raw.githubusercontent.com/outofsync42/fold-type/master/images/extension-settings.png)
 
 ## JS
 
