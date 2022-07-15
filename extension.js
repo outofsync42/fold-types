@@ -525,7 +525,7 @@ var FoldTypes = function (application) {
 		return isset(value) ? value : (isset(default_value) ? default_value : null);
 	}
 	this.isValidDocType = function () {
-		var validDocTypes = ['js', 'php', 'css', 'html', 'htm']
+		var validDocTypes = ['js', 'jsx', 'ts', 'tsx', 'php', 'css', 'html', 'htm']
 		return in_array(application.documentType(), validDocTypes);
 	}
 
@@ -791,8 +791,11 @@ var FoldTypes = function (application) {
 
 		var fileType = application.documentType();
 		var syntax = null;
-		if (in_array(fileType, ['js', 'css']) == true) {
-			syntax = fileType;
+		if (in_array(fileType, ['js','ts', 'jsx', 'tsx']) == true) {
+			syntax = 'js';
+		}
+		if (in_array(fileType, ['css']) == true) {
+			syntax = 'css';
 		}
 		if (in_array(fileType, ['htm', 'html']) == true) {
 			syntax = 'html';
@@ -1073,9 +1076,6 @@ var FoldTypes = function (application) {
 					}
 
 				}
-				if (line_x == 10) {
-					console.log(syntax);
-				}
 			}
 			cache.documentLines[line_x]['syntax'] = syntax;
 			cache.documentLines[line_x]['isFoldType'] = false;
@@ -1144,7 +1144,7 @@ var FoldTypes = function (application) {
 
 		}
 
-		debug(cache.documentLines)
+		// console.log(cache.documentLines)
 	}
 	function cacheDocumentJsLine(line_x) {
 
@@ -1886,15 +1886,15 @@ var FoldTypes = function (application) {
 				'js.method': { enabled: self.getConfigurationSetting('js.method') == "Yes" ? true : false },
 				'js.object': { enabled: self.getConfigurationSetting('js.object') == "Yes" ? true : false },
 				'js.objectFunctionParam': { enabled: self.getConfigurationSetting('js.objectFunctionParam') == "Yes" ? true : false },
-				'js.objectObjectParam': { enabled: self.getConfigurationSetting('js.objectObjectParam') == "Yes" ? true :false },
+				'js.objectObjectParam': { enabled: self.getConfigurationSetting('js.objectObjectParam') == "Yes" ? true : false },
 				'js.array': { enabled: self.getConfigurationSetting('js.array') == "Yes" ? true : false },
-				'js.arrayParam': { enabled: self.getConfigurationSetting('js.arrayParam') == "Yes" ? true :false },
+				'js.arrayParam': { enabled: self.getConfigurationSetting('js.arrayParam') == "Yes" ? true : false },
 				'js.while': { enabled: self.getConfigurationSetting('js.while') == "Yes" ? true : false },
-				'js.for': { enabled: self.getConfigurationSetting('js.for') == "Yes" ? true :false },
+				'js.for': { enabled: self.getConfigurationSetting('js.for') == "Yes" ? true : false },
 				'js.if': { enabled: self.getConfigurationSetting('js.if') == "Yes" ? true : false },
-				'js.else': { enabled: self.getConfigurationSetting('js.else') == "Yes" ? true :false },
+				'js.else': { enabled: self.getConfigurationSetting('js.else') == "Yes" ? true : false },
 				'js.switch': { enabled: self.getConfigurationSetting('js.switch') == "Yes" ? true : false },
-				'js.switchCase': { enabled: self.getConfigurationSetting('js.switchCase') == "Yes" ? true :false },
+				'js.switchCase': { enabled: self.getConfigurationSetting('js.switchCase') == "Yes" ? true : false },
 				'js.switchDefault': { enabled: self.getConfigurationSetting('js.switchDefault') == "Yes" ? true : false },
 				'js.try': { enabled: self.getConfigurationSetting('js.try') == "Yes" ? true : false },
 				'js.tryCatch': { enabled: self.getConfigurationSetting('js.tryCatch') == "Yes" ? true : false },
@@ -1902,13 +1902,13 @@ var FoldTypes = function (application) {
 				'js.comment': { enabled: self.getConfigurationSetting('js.comment') == "Yes" ? true : false },
 				//php
 				'php.class': { enabled: self.getConfigurationSetting('php.class') == "Yes" ? true : false },
-				'php.interface': { enabled: self.getConfigurationSetting('php.interface') == "Yes" ? true :false },
+				'php.interface': { enabled: self.getConfigurationSetting('php.interface') == "Yes" ? true : false },
 				'php.method': { enabled: self.getConfigurationSetting('php.method') == "Yes" ? true : false },
-				'php.array': { enabled: self.getConfigurationSetting('php.array') == "Yes" ? true :false },
+				'php.array': { enabled: self.getConfigurationSetting('php.array') == "Yes" ? true : false },
 				'php.arrayFunctionParam': { enabled: self.getConfigurationSetting('php.arrayFunctionParam') == "Yes" ? true : false },
 				'php.arrayObjectParam': { enabled: self.getConfigurationSetting('php.arrayObjectParam') == "Yes" ? true : false },
 				'php.while': { enabled: self.getConfigurationSetting('php.while') == "Yes" ? true : false },
-				'php.for': { enabled: self.getConfigurationSetting('php.for') == "Yes" ? true :false },
+				'php.for': { enabled: self.getConfigurationSetting('php.for') == "Yes" ? true : false },
 				'php.if': { enabled: self.getConfigurationSetting('php.if') == "Yes" ? true : false },
 				'php.else': { enabled: self.getConfigurationSetting('php.else') == "Yes" ? true : false },
 				'php.switch': { enabled: self.getConfigurationSetting('php.switch') == "Yes" ? true : false },
@@ -1916,7 +1916,7 @@ var FoldTypes = function (application) {
 				'php.switchDefault': { enabled: self.getConfigurationSetting('php.switchDefault') == "Yes" ? true : false },
 				'php.try': { enabled: self.getConfigurationSetting('php.try') == "Yes" ? true : false },
 				'php.tryCatch': { enabled: self.getConfigurationSetting('php.tryCatch') == "Yes" ? true : false },
-				'php.tryFinally': { enabled: self.getConfigurationSetting('php.tryFinally') == "Yes" ? true :false },
+				'php.tryFinally': { enabled: self.getConfigurationSetting('php.tryFinally') == "Yes" ? true : false },
 				'php.comment': { enabled: self.getConfigurationSetting('php.comment') == "Yes" ? true : false },
 				//css
 				'css.block': { enabled: self.getConfigurationSetting('css.block') === "Yes" ? true : false },
@@ -1995,7 +1995,6 @@ var FoldTypes = function (application) {
 			return;
 		}
 		cache = {};
-		log('commandFoldAll')
 
 		var cursorPosition = application.editorCursorPosition();
 		var parentLineNumber = getParentTopLineNumber(true); //get first foldable parent
@@ -2037,7 +2036,7 @@ var FoldTypes = function (application) {
 			return;
 		}
 		cache = {};
-		log('commandFoldParent')
+
 		let parentLineNumber = getParentTopLineNumber(); //get first fold type
 		var cursorPosition = application.editorCursorPosition();
 		var lines = getParentLines();
@@ -2058,7 +2057,7 @@ var FoldTypes = function (application) {
 			return;
 		}
 		cache = {};
-		log('commandFoldChildren');
+
 		var cursorPosition = application.editorCursorPosition();
 		var lines = getParentChildrenLines();
 		await unFold(lines); //need to reset all lines to open first
@@ -2070,7 +2069,7 @@ var FoldTypes = function (application) {
 			return;
 		}
 		cache = {};
-		log('commandFoldChildren');
+
 		var cursorPosition = application.editorCursorPosition();
 		var lines = getParentChildrenLines();
 		await unFold(lines); //need to reset all lines to open first
@@ -2081,7 +2080,6 @@ var FoldTypes = function (application) {
 		if (fallback('editor.unfold')) {
 			return;
 		}
-		log('unFoldParent');
 		cache = {};
 		var cursorPosition = application.editorCursorPosition();
 		await unFold(getParentLines());
@@ -2094,7 +2092,6 @@ var FoldTypes = function (application) {
  * @param {vscode.ExtensionContext} _context
  */
 function activate(_context) {
-	log('FoldTypes Active')
 	context = _context
 	var application = new Application();
 	var foldTypes = new FoldTypes(application);
