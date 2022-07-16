@@ -800,6 +800,9 @@ var FoldTypes = function (application) {
 		if (in_array(fileType, ['htm', 'html']) == true) {
 			syntax = 'html';
 		}
+		if (in_array(fileType, ['php']) == true) {
+			syntax = 'php';
+		}
 
 		var in_comment_block = false;
 
@@ -968,6 +971,7 @@ var FoldTypes = function (application) {
 				syntax = 'php';
 				if (newLine.indexOf('<?') > -1 || newLine.indexOf('<?php') > -1) {
 					cache.php_open = true;
+					cache.php_last_type = null;
 				}
 				if (newLine.indexOf('?>') > -1 || newLine.indexOf('?>') > -1) {
 					cache.php_open = false;
@@ -1004,7 +1008,7 @@ var FoldTypes = function (application) {
 				}
 
 				if (syntax == "php") {
-					if ((isset(cache.php_last_type) && cache.php_last_type == 'html') || trim(newLine).indexOf('<') === 0) {
+					if (is_true(cache.php_open) == false && (isset(cache.php_last_type) && cache.php_last_type == 'html') || trim(newLine).indexOf('<') === 0) {
 						syntax = 'html';
 						cache.php_last_type = 'html';
 					}
