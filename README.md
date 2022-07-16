@@ -16,6 +16,19 @@ There is no VSCode API to get fold points or types so syntax checking and patter
 
 While this has been heavily tested to catch all patterns, there may be some outliers that fell through the cracks. If you notice something fold that shouldn't or something not fold that should please submit a bug request and I will look into it as soon as possible. Also if there is a language not supported and I get enough requests that make it worth the time to add I will take the time to learn the syntax and patterns and add them.
 
+# Example
+
+Example setting that demonstrates folding effect with "fold-types.php.class" set to false.
+```
+{
+ "fold-types.php.class" : false
+}
+```
+With "fold-types.php.class" set to false, when the "fold-types.fold-all" command is executed, only the functions are folded leaving the class un-collapsed allowing for a faster, intuitive navigation to the code you are trying to find.
+
+![Command Palette](https://raw.githubusercontent.com/outofsync42/fold-types/master/images/fold-type-fol-all.gif)
+
+
 # Commands
 
 ### Fold
@@ -43,18 +56,6 @@ You can and should still use the existing **editor.unfoldAll** command to unfold
 Type "Fold Types" in the command palette to find the commands but its recommended you assign hot keys.
 
 ![Command Palette](https://raw.githubusercontent.com/outofsync42/fold-types/master/images/comand-palette.png)
-
-# Example
-
-Example setting that demonstrates folding effect with "fold-types.php.class" set to false.
-```
-{
- "fold-types.php.class" : false
-}
-```
-With "fold-types.php.class" set to false, when the "fold-types.fold-all" command is executed. Only the functions are folded leaving the class uncollapsed.
-
-![Command Palette](https://raw.githubusercontent.com/outofsync42/fold-types/master/images/fold-type-fol-all.gif)
 
 # Configuration Settings
 
