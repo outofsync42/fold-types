@@ -44,6 +44,18 @@ Type "Fold Types" in the command palette to find the commands but its recommende
 
 ![Command Palette](https://raw.githubusercontent.com/outofsync42/fold-types/master/images/comand-palette.png)
 
+# Example
+
+Example setting that demonstrates folding effect with "fold-types.php.class" set to false.
+```
+{
+ "fold-types.php.class" : false
+}
+```
+With "fold-types.php.class" set to false, when the "fold-types.fold-all" command is executed. Only the functions are folded leaving the class uncollapsed.
+
+![Command Palette](https://raw.githubusercontent.com/outofsync42/fold-types/master/images/fold-type-fol-all.gif)
+
 # Configuration Settings
 
 Fold Types comes configured with a few enabled types that I feel to be the most intuitive items to be folded but almost any type can configured to be folded or ignored based on your needs.
