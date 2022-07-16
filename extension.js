@@ -808,6 +808,15 @@ var FoldTypes = function (application) {
 
 		cache.documentLines = new Array;
 
+		cache.php_open = false;
+		cache.html_open_tag = false;
+		cache.html_in_tag = false;
+		cache.html_open_script = false;
+		cache.html_open_style = false;
+		cache.php_js_open = false;
+		cache.php_css_open = false;
+		cache.php_syntax = ''
+
 		for (var i in lines) {
 
 			let line_x = parseInt(i);
@@ -818,7 +827,7 @@ var FoldTypes = function (application) {
 			let line = " " + lineTemp + " ~"; //add leading ws and eol
 
 			cache.documentLines[line_x] = {};
-
+			cache.documentLines[line_x]['syntax'] = '';
 			line = str_replace("(", " ( ", line); //make sure key words have spaces around them
 			line = str_replace(")", " ) ", line); //make sure key words have spaces around them
 			line = str_replace("{", " { ", line); //make sure key words have spaces around them
@@ -968,119 +977,155 @@ var FoldTypes = function (application) {
 			cache.documentLines[line_x]['text'] = "";
 
 			if (fileType == 'php') {
-				syntax = 'php';
-				if (newLine.indexOf('<?') > -1 || newLine.indexOf('<?php') > -1) {
-					cache.php_open = true;
-					cache.php_last_type = null;
-				}
-				if (newLine.indexOf('?>') > -1 || newLine.indexOf('?>') > -1) {
-					cache.php_open = false;
+				syntax = '';
+
+				if (cache.php_open) {
 					syntax = 'php';
+					cache.php_syntax = '';
 				}
-				if (is_true(cache.php_open)) {
-					syntax = 'php';
+				if (cache.php_js_open) {
+					cache.php_syntax = 'js';
 				}
-
-				//mixed html_js
-				if (newLine.indexOf('</script') > -1) {
-					cache.php_html_script = false;
-					syntax = 'html';
-				}
-				if (is_true(cache.php_html_script)) {
-					syntax = 'js';
-				}
-				if (newLine.indexOf('<script') > -1) {
-					cache.php_html_script = true;
-					syntax = 'html';
+				if (cache.php_css_open) {
+					cache.php_syntax = 'css';
 				}
 
-				//mixed html_css
-				if (newLine.indexOf('</style') > -1) {
-					cache.php_html_css = false;
-					syntax = 'html';
-				}
-				if (is_true(cache.php_html_css)) {
-					syntax = 'css';
-				}
-				if (newLine.indexOf('<style') > -1) {
-					cache.php_html_css = true;
-					syntax = 'html';
-				}
-
-				if (syntax == "php") {
-					if (is_true(cache.php_open) == false && (isset(cache.php_last_type) && cache.php_last_type == 'html') || trim(newLine).indexOf('<') === 0) {
-						syntax = 'html';
-						cache.php_last_type = 'html';
+				let openWait = false;
+				let char_x = 0;
+				while (char_x < line.length) {
+					let html_open_tag_start = false
+					if (line.indexOf('<?', char_x) == char_x) {
+						cache.php_open = true;
 					}
+					if (cache.php_open == true && line.indexOf('?>', char_x) == char_x) {
+						cache.php_open = false;
+					}
+					if (cache.php_open == false) {
 
-					if (syntax == "html") {
-
-						cache.documentLines[line_x]['idAttribute'] = false;
-						cache.documentLines[line_x]['elementTagPos'] = null;
-						cache.documentLines[line_x]['elementTag'] = "";
-
-						let foundOpenTag = false;
-						let isTag = false;
-						let isComment = false;
-						let charX = 0;
-						let tag = "";
-						let tags = [];
-						let tagsPos = [];
-						while (charX < newLine.length) {
-
-							if (isTag == false && newLine[charX] == '<' && newLine[charX + 1] == '!' && isset(newLine[charX + 2]) && newLine[charX + 2] == '-' && isset(newLine[charX + 3]) && newLine[charX + 3] == '-') {
-								cache.documentLines[line_x]['lineType'] = 'comment';
-								isComment = true;
-							} else if (isTag == false && isComment == true) {
-								if (newLine[charX] == '-' && newLine[charX + 1] == '-' && isset(newLine[charX + 2]) && newLine[charX + 2] == '>') {
-									isComment = false;
-									cache.documentLines[line_x]['lineType'] = '';
-								}
-							}
-
-							if (isComment == false) {
-								if (isTag == false && newLine[charX] == '<' && /[a-zA-Z]/.test(newLine[charX + 1])) {
-									isTag = true;
-								} else if (isTag && (newLine[charX] == ' ' || newLine[charX] == ">")) {
-									isTag = false;
-									foundOpenTag = true;
-								}
-
-								if (isTag && newLine[charX] !== '<') {
-									tag += newLine[charX];
-								}
-								if (foundOpenTag) {
-									foundOpenTag = false;
-									tags.push(tag);
-									tagsPos.push(charX);
-									tag = "";
-								}
-
-								if (newLine[charX] == "/" && newLine[charX - 1] == "<") {
-									//close tag
-									tags.pop();
-									tagsPos.pop();
-								}
-							}
-
-							charX++;
+						if (cache.php_js_open && openWait==false) {
+							cache.php_syntax = 'js';
+						}
+						if (cache.php_css_open && openWait==false) {
+							cache.php_syntax = 'css';
 						}
 
-						if (tags.length > 0) {
-							//keep the last open tag
-							let lastTag = tags[tags.length - 1];
-							let lastTagPos = tagsPos[tagsPos.length - 1];
-							if (newLine.indexOf('id = ""', lastTagPos) > -1 && in_array(lastTag, elementVoids) == false) {
-								cache.documentLines[line_x]['idAttribute'] = true;
+						if (cache.html_open_tag == true && line.indexOf('>', char_x) == char_x) {
+							//php opened inside the attributes of a tag
+							if (cache.html_open_script) {
+								openWait = true;
+								cache.html_open_script = false;
+								cache.php_js_open = true; //mark for next row
 							}
+							if (cache.html_open_style) {
+								openWait = true;
+								cache.html_open_style = false;
+								cache.php_css_open = true; //mark for next row
+							}
+							cache.php_syntax = 'html'; //put it back
+							cache.html_open_tag = false;
+						}
+						if (cache.html_open_tag == false && (cache.php_syntax === '' || cache.php_syntax === 'html') && line.indexOf('<', char_x) == char_x && /[a-zA-Z]/.test(line[char_x + 1])) {
+							cache.php_syntax = 'html'
+							cache.html_open_tag = true;
+							html_open_tag_start = true;
+							cache.html_in_tag = true;
+						}
+						if (cache.php_syntax == 'html' && html_open_tag_start && line.indexOf('<script', char_x) == char_x) {
+							cache.html_open_script = true;
+						}
+						if (cache.php_syntax == 'html' && html_open_tag_start && line.indexOf('<styl', char_x) == char_x) {
+							cache.html_open_style = true;
+						}
+						if (cache.php_js_open && line.indexOf('</script', char_x) == char_x) {
+							cache.php_js_open = false;
+							cache.php_syntax = 'html'
+						}
+						if (cache.php_css_open && line.indexOf('</style', char_x) == char_x) {
+							cache.php_css_open = false;
+							cache.php_syntax = 'html'
+						}
+						if(cache.html_in_tag==true && (cache.php_syntax === '' || cache.php_syntax === 'html')){
+							cache.php_syntax = 'html'
+							if(line.indexOf('</', char_x) == char_x){
+								cache.html_in_tag = false;
+							}
+						}
+					}
 
-							cache.documentLines[line_x]['elementTag'] = lastTag == 'th' ? 'td' : lastTag;
-							cache.documentLines[line_x]['elementTags'] = tags;
+					char_x++;
+				}
+
+				if (cache.php_syntax != '') {
+					syntax = cache.php_syntax;
+				}
+
+				if (syntax == "html") {
+
+					cache.documentLines[line_x]['idAttribute'] = false;
+					cache.documentLines[line_x]['elementTagPos'] = null;
+					cache.documentLines[line_x]['elementTag'] = "";
+
+					let foundOpenTag = false;
+					let isTag = false;
+					let isComment = false;
+					let charX = 0;
+					let tag = "";
+					let tags = [];
+					let tagsPos = [];
+					while (charX < newLine.length) {
+
+						if (isTag == false && newLine[charX] == '<' && newLine[charX + 1] == '!' && isset(newLine[charX + 2]) && newLine[charX + 2] == '-' && isset(newLine[charX + 3]) && newLine[charX + 3] == '-') {
+							cache.documentLines[line_x]['lineType'] = 'comment';
+							isComment = true;
+						} else if (isTag == false && isComment == true) {
+							if (newLine[charX] == '-' && newLine[charX + 1] == '-' && isset(newLine[charX + 2]) && newLine[charX + 2] == '>') {
+								isComment = false;
+								cache.documentLines[line_x]['lineType'] = '';
+							}
 						}
 
+						if (isComment == false) {
+							if (isTag == false && newLine[charX] == '<' && /[a-zA-Z]/.test(newLine[charX + 1])) {
+								isTag = true;
+							} else if (isTag && (newLine[charX] == ' ' || newLine[charX] == ">")) {
+								isTag = false;
+								foundOpenTag = true;
+							}
+
+							if (isTag && newLine[charX] !== '<') {
+								tag += newLine[charX];
+							}
+							if (foundOpenTag) {
+								foundOpenTag = false;
+								tags.push(tag);
+								tagsPos.push(charX);
+								tag = "";
+							}
+
+							if (newLine[charX] == "/" && newLine[charX - 1] == "<") {
+								//close tag
+								tags.pop();
+								tagsPos.pop();
+							}
+						}
+
+						charX++;
+					}
+
+					if (tags.length > 0) {
+						//keep the last open tag
+						let lastTag = tags[tags.length - 1];
+						let lastTagPos = tagsPos[tagsPos.length - 1];
+						if (newLine.indexOf('id = ""', lastTagPos) > -1 && in_array(lastTag, elementVoids) == false) {
+							cache.documentLines[line_x]['idAttribute'] = true;
+						}
+
+						cache.documentLines[line_x]['elementTag'] = lastTag == 'th' ? 'td' : lastTag;
+						cache.documentLines[line_x]['elementTags'] = tags;
 					}
 
 				}
+
 			}
 			cache.documentLines[line_x]['syntax'] = syntax;
 			cache.documentLines[line_x]['isFoldType'] = false;
