@@ -1073,6 +1073,7 @@ var FoldTypes = function (application) {
 							if (newLine.indexOf('id = ""', lastTagPos) > -1 && in_array(lastTag, elementVoids) == false) {
 								cache.documentLines[line_x]['idAttribute'] = true;
 							}
+
 							cache.documentLines[line_x]['elementTag'] = lastTag == 'th' ? 'td' : lastTag;
 							cache.documentLines[line_x]['elementTags'] = tags;
 						}
@@ -1840,7 +1841,24 @@ var FoldTypes = function (application) {
 					} else {
 
 						if (in_array(cache.documentLines[line_x]['elementTag'], elementTypes)) {
-							cache.documentLines[line_x]['lineType'] = cache.documentLines[line_x]['elementTag'];
+							let tag = cache.documentLines[line_x]['elementTag'];
+							if (in_array(tag, ['td', 'th'])) {
+								tag = 'tableTd';
+							}
+							if (tag == 'tr') {
+								tag = 'tableTr';
+							}
+							if (tag == 'tbody') {
+								tag = 'tableTbody';
+							}
+							if (tag == 'thead') {
+								tag = 'tableThead';
+							}
+							if (tag == 'tfoot') {
+								tag = 'tableTfoot';
+							}
+
+							cache.documentLines[line_x]['lineType'] = tag;
 							setFoldInfo(line_x);
 						}
 
