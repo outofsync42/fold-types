@@ -942,7 +942,7 @@ var FoldTypes = function (application) {
 				//reg string
 				if (match_lock == "" || match_lock == "in_reg_str") {
 					//detecting regex is hard... this will likely need to be updated
-					if (in_reg_str_start == false && char == "/" && (is_array(next_char.match(/[a-zA-Z0-9^+\[\\(]/)) || (prev_char == " " && in_array(prev2_char, ['(', ',', '=', '[', ':']))) && prev_char != "*" && prev_char != "\\" && prev_char != "<") {
+					if (in_reg_str_start == false && char == "/" && (is_array(next_char.match(/[a-zA-Z0-9^+\[\\(<]/)) || (prev_char == " " && in_array(prev2_char, ['(', ',', '=', '[', ':']))) && prev_char != "*" && prev_char != "\\" && prev_char != "<") {
 						match_length = 1;
 						in_reg_str = true;
 						match_lock = in_reg_str ? "in_reg_str" : "";
@@ -1215,9 +1215,13 @@ var FoldTypes = function (application) {
 			while (line_xx > -1 && max_lines > 0) {
 				var text = cache.documentLines[line_xx]['text'];
 				let char_x = start ? braceStart - 1 : text.length;
+				console.log('---')
+				console.log(line_xx)
+				console.log(char_x);
 				while (char_x > 0) {
-
-					if (text[char_x].match(/[a-zA-Z0-9]/) !== null) {
+					console.log(text);
+					console.log(char_x);
+					if (text[char_x].match(/[a-zA-Z0-9\]]/) !== null) {
 						//found previous block so this is a param key
 						isParam = true;
 						break;
@@ -1228,7 +1232,15 @@ var FoldTypes = function (application) {
 						break;
 					}
 					if (text[char_x] == "=" || ((text[char_x] == ":" || text[char_x] == "?") && text.indexOf(":") > -1 && text.indexOf("?") > -1)) {
-						cache.documentLines[line_xx]['lineType'] = "array"; //method
+						cache.documentLines[line_xx]['lineType'] = "array";
+						break;
+					}
+					if (text[char_x] == "|" || text[char_x-1] == "|") {
+						cache.documentLines[line_xx]['lineType'] = "array"; 
+						break;
+					}
+					if (text[char_x] == "&" || text[char_x-1] == "&") {
+						cache.documentLines[line_xx]['lineType'] = "array"; 
 						break;
 					}
 					if (text[char_x] == "(" || text[char_x] == ",") {
