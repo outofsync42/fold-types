@@ -2,7 +2,7 @@
 	"name": "fold-types",
 	"displayName": "Fold Types",
 	"description": "Fold enabled types (class, methods, etc..) instead of levels",
-	"version": "1.0.9",
+	"version": "1.0.10",
 	"publisher": "outofsync42",
 	"license": "MIT",
 	"repository": {
