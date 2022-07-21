@@ -1,504 +1,13 @@
 const vscode = require('vscode');
-var path = require("path");
+const Application = require('./lib/application');
 
-/**
- * @type {vscode.ExtensionContext}
- */
-var context;
+require('./lib/functions')();
 
-//helpers
-function isset(object) {
-	if (typeof object != 'undefined' && object !== null) {
-
-		//return NaN as false
-		if (typeof object == 'number' && object.toString() == 'NaN') {
-			return false;
-		}
-
-		return true;
-	}
-	return false;
-}
-function is_array(object) {
-	if (isset(object) && object instanceof Array) {
-		return true;
-	}
-	return false;
-}
-function is_int(value) {
-	if (typeof value == 'number' && value.toString() != 'NaN' && value.toString() != 'Infinity') {
-		return value.toString().indexOf('.') < 0;
-	}
-	return false;
-}
-function is_bool(object) {
-	if (typeof object == 'boolean') {
-		return true;
-	}
-	return false;
-}
-function is_string(object) {
-	if (typeof object == 'string') {
-		return true;
-	}
-	return false;
-}
-function is_true(object) {
-	if ((is_bool(object) && object === true) || (is_int(object) && object === 1)) {
-		return true;
-	}
-	return false;
-}
-function is_numeric(value) {
-
-	if (typeof value == 'number' && value.toString() != 'NaN' && value.toString() != 'Infinity') {
-		return true;
-	}
-
-	if (is_string(value)) {
-		var regInt = /^-?[0-9]+$/;
-		if (regInt.test(value)) {
-			return true;
-		}
-
-		var regFloat = /^-?[0-9]+(\.[0-9]+)?$/;
-		if (regFloat.test(value)) {
-			return true;
-		}
-	}
-
-	return false;
-}
-function is_function(object) {
-	if (typeof object == 'function') {
-		return true;
-	}
-	return false;
-}
-function in_string(needle, haystack) {
-	if (is_string(haystack)) {
-		if (haystack.indexOf(needle) > -1) {
-			return true;
-		}
-	}
-	return false;
-}
-function in_array(needle, haystack) {
-	if (is_array(haystack)) {
-		for (var i in haystack) {
-			if (haystack[i] == needle) {
-				return true;
-			}
-		}
-	}
-	return false;
-}
-function array_column(array, columnName) {
-	var table;
-	if (is_string(array)) {
-		table = columnName;
-		columnName = array;
-	} else {
-		table = array;
-	}
-
-	var list = new Array;
-
-	if (is_array(columnName)) {
-		for (var i in table) {
-			var row = {};
-			for (var c in columnName) {
-				if (isset(table[i][columnName[c]])) {
-					row[columnName[c]] = table[i][columnName[c]];
-				}
-			}
-			list.push(row);
-		}
-	} else {
-		for (var i in table) {
-			if (isset(table[i][columnName])) {
-				list.push(table[i][columnName]);
-			}
-		}
-	}
-	return list;
-}
-function trim(str, charlist) {
-
-	if (str === null) {
-		return '';
-	}
-
-	var whitespace, l = 0,
-		i = 0;
-	str += '';
-
-	if (!charlist) {
-		// default list
-		whitespace =
-			' \n\r\t\f\x0b\xa0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u200b\u2028\u2029\u3000';
-	} else {
-		// preg_quote custom list
-		charlist += '';
-		whitespace = charlist.replace(/([\[\]\(\)\.\?\/\*\{\}\+\$\^\:])/g, '$1');
-	}
-
-	l = str.length;
-	for (i = 0; i < l; i++) {
-		if (whitespace.indexOf(str.charAt(i)) === -1) {
-			str = str.substring(i);
-			break;
-		}
-	}
-
-	l = str.length;
-	for (i = l - 1; i >= 0; i--) {
-		if (whitespace.indexOf(str.charAt(i)) === -1) {
-			str = str.substring(0, i + 1);
-			break;
-		}
-	}
-
-	return whitespace.indexOf(str.charAt(0)) === -1 ? str : '';
-}
-function str_replace(find, replace, text) {
-
-	if (find !== replace && isset(replace)) {
-		if (is_array(find) == false) {
-			find = [find];
-		}
-		if (is_string(text)) {
-			for (var i in find) {
-				if (find[i] instanceof RegExp) {
-					text = text.replace(find[i], replace)
-				} else {
-					if (in_string(find[i], text)) {
-						text = text.split(find[i]).join(replace);
-					}
-				}
-			}
-		}
-	}
-
-	return text;
-}
-function length(object) {
-
-	var x = 0;
-
-	if (is_array(object)) {
-		//I dont like relying on .length as it doesnt always work as expected
-		//array[0] = ''
-		//array[5] = ''
-		//produces length of 5 when its really 2
-		for (var i in object) {
-			++x;
-		}
-	} else if (is_array(object)) {
-		if (isset(object.byteLength) == true) {
-			x = object.byteLength;
-		} else if (isset(Object['keys'])) {
-			x = Object['keys'](object).length;
-		} else {
-			for (var i in object) {
-				++x;
-			}
-		}
-	} else if (is_string(object)) {
-		x = object.length;
-	} else if (is_numeric(object)) {
-		x = object.toString().length;
-	}
-
-	return x;
-}
-
-
-function Extend(self, parent, p1, p2, p3) {
-	//because prototype is ugly
-	if (is_function(parent)) {
-		parent.call(self, p1, p2, p3);
-	} else {
-		for (var i in parent) {
-			self[i] = parent[i];
-		}
-	}
-}
-
-var EventHandler = function () {
-
-	var self = this;
-
-	var _cbs = {}; //callbacks
-
-	this.on = function (tag, callback, runOnce) {
-		if (is_string(tag) && is_function(callback)) {
-			if (isset(_cbs[tag]) == false) {
-				_cbs[tag] = {};
-			}
-
-			var index = length(_cbs[tag]);
-
-			if (is_bool(runOnce) == false) {
-				runOnce = false;
-			}
-			_cbs[tag][index] = {
-				'enabled': true,
-				'runOnce': runOnce,
-				'callback': callback
-			};
-		}
-	};
-	this.once = function (tag, callback) {
-		self.on(tag, callback, true);
-	};
-	this.emit = function (tag, param1, param2, param3, param4, param5) {
-		_wc = 0;
-		if (isset(_cbs[tag]) == true) {
-			for (var i in _cbs[tag]) {
-				if (is_function(_cbs[tag][i]['callback']) && _cbs[tag][i]['enabled'] == true) {
-					var callback = _cbs[tag][i]['callback'];
-					var response = callback.call(this, param1, param2, param3, param4, param5);
-					if (isset(_cbs[tag]) == true && isset(_cbs[tag][i]) == true && _cbs[tag][i]['runOnce'] == true) {
-						delete _cbs[tag][i];
-					}
-					if (isset(response)) {
-						return response;
-					}
-				}
-			}
-		}
-		return self;
-	};
-	this.isEnabledEvent = function (tag, bool) {
-		if (isset(_cbs[tag])) {
-			for (var i in _cbs[tag]) {
-				_cbs[tag][i]['enabled'] = bool;
-			}
-		}
-	};
-	this.clearEvent = function (tag) {
-		if (isset(tag)) {
-			_cbs[tag] = {};
-		} else {
-			_cbs = {};
-		}
-	};
-
-	//READY
-	var _orcb = new Array; //onmreadycallback
-	var _wc = 0; //waitcount
-	var _ri = 0; //readyindex
-	var _continue = function () {
-		if (_wc == 0) {
-			if (isset(_orcb[_ri])) {
-				_orcb[_ri]();
-			}
-			_ri++;
-			self.resetReady();
-		}
-	};
-	this.wait = function () {
-		_wc++;
-		_wc = _wc > 0 ? _wc : 0;
-	};
-	this.continue = function () {
-		_wc--;
-		_wc = _wc > 0 ? _wc : 0;
-		_continue();
-	};
-	this.ready = function (callback) {
-		_orcb.push(callback);
-		//give one interval incase wait is called
-		setTimeout(function () {
-			_continue();
-		});
-	};
-	this.resetReady = function () {
-		if (_ri == length(_orcb) || length(_orcb) == 0) {
-			_orcb = new Array;
-			_wc = 0;
-			_ri = 0;
-		}
-	};
-
-};
-
-//application
-var Application = function () {
-
-	var self = this;
-
-	Extend(this, EventHandler);
-
-	var cache = {};
-
-	//editor
-	this.editor = function () {
-		return typeof vscode.window.activeTextEditor !== 'undefined' ? vscode.window.activeTextEditor : null;
-	}
-	this.editorCursorPosition = function () {
-		return typeof vscode.window.activeTextEditor !== 'undefined' ? vscode.window.activeTextEditor.selection.active : null;
-	}
-	this.editorCursorNewPosition = function (lineNumber, charNumber) {
-		var pos = self.editorCursorPosition();
-		return pos !== null ? pos.with(lineNumber, charNumber) : null;
-	}
-	//editor actions
-	this.editorSelectLines = function (lineNumbers) {
-		if ((is_int(lineNumbers) == false && is_array(lineNumbers) == false) || (is_array(lineNumbers) && lineNumbers.length == 0)) {
-			return;
-		}
-		lineNumbers = is_array(lineNumbers) ? lineNumbers : [lineNumbers];
-		let selections = new Array;
-		for (var i in lineNumbers) {
-			var linePosition = self.editorCursorNewPosition(lineNumbers[i], 0);
-			if (linePosition !== null) {
-				selections.push(new vscode.Selection(linePosition, linePosition));
-			}
-		}
-		var editor = self.editor();
-		if (editor !== null) {
-			editor.selections = selections;
-		}
-	}
-	this.editorUnSelectAll = function () {
-		var editor = self.editor();
-		if (editor !== null) {
-			var linePosition = self.editorCursorNewPosition(editor.selection.start.line, editor.selection.start.character);
-			if (linePosition !== null) {
-				var cursor = new vscode.Selection(linePosition, linePosition);
-				editor.selections = [cursor];
-			}
-		}
-	}
-	this.editorSetCursorPosition = function (lineNumber, charNumber) {
-		var editor = self.editor();
-		if (editor !== null) {
-			if (isset(editor.selection)) {
-				lineNumber = is_int(lineNumber) ? lineNumber : 0;
-				charNumber = is_int(charNumber) ? charNumber : 0;
-				var linePosition = self.editorCursorNewPosition(lineNumber, charNumber);
-				if (linePosition !== null) {
-					editor.selection = new vscode.Selection(linePosition, linePosition);
-				}
-			}
-		}
-	}
-	this.editorFoldSelectedLines = async function () {
-		await self.executeCommand('editor.fold');
-	}
-	this.editorFoldLines = async function (lineNumbers) {
-		await vscode.commands.executeCommand('editor.fold', { selectionLines: lineNumbers });
-	}
-	this.editorUnFoldSelectedLines = async function () {
-		await self.executeCommand('editor.unfold');
-	}
-	this.editorUnFoldLines = async function (lineNumbers) {
-		await vscode.commands.executeCommand('editor.unfold', { selectionLines: lineNumbers });
-	}
-	this.editorFormatDocument = async function () {
-		await vscode.commands.executeCommand('editor.action.formatDocument');
-	}
-
-	//document
-	this.document = function () {
-		var editor = self.editor();
-		if (editor !== null) {
-			return editor.document;
-		}
-		return null;
-	}
-	this.documentPath = function () {
-		var document = self.document();
-		return document !== null ? document.fileName : "";
-	}
-	this.documentName = function () {
-		return path.basename(self.documentPath());
-	}
-	this.documentType = function () {
-		return str_replace('.', '', path.extname(self.documentPath()));
-	}
-	this.documentLines = function () {
-		if (isset(cache.documentLines) == false) {
-			var document = self.document();
-			let text = document !== null ? document.getText() : null;
-			cache.documentLines = text !== null ? text.split(/\r?\n/) : []; //zero index
-		}
-		return cache.documentLines;
-	}
-	this.documentLineCount = function () {
-		var document = self.document();
-		return document !== null ? document.lineCount : -1;
-	}
-
-	//actions
-	this.executeCommand = async function (command) {
-		await vscode.commands.executeCommand(command);
-	}
-	this.registerCommand = function (command, callback) {
-		context.subscriptions.push(vscode.commands.registerCommand(command, function () {
-			cache = {}; //clear cache
-			if (typeof callback == "function") {
-				callback();
-			}
-		}));
-	}
-	this.registerMenuCommand = function (command, callback) {
-		const disposable = vscode.commands.registerTextEditorCommand(command, callback);
-		context.subscriptions.push(disposable);
-	}
-
-	this.activate = function () {
-		//if activated by file open we need to manually trigger on document open
-		var document = self.document();
-		if (document !== null) {
-			documentOpen(document);
-		}
-	}
-
-	//system events
-	this.openDocuments = null;
-	var documentOpen = function (document) {
-		if (document.uri.scheme === 'file') {
-			if (isset(self.openDocuments) == false) {
-				self.openDocuments = [];
-			}
-			self.openDocuments.push(document.fileName);
-			setTimeout(function () {
-				self.emit('documentOpen', document);
-			})
-		}
-	}
-	vscode.workspace.onDidOpenTextDocument(function (document) {
-		if (isset(self.openDocuments) == false) {
-			self.openDocuments = [];
-		}
-		if (document.uri.scheme === 'file' && in_array(document.fileName, self.openDocuments) == false) {
-			documentOpen(document)
-		}
-	})
-	vscode.workspace.onDidCloseTextDocument(function (document) {
-		if (isset(self.openDocuments) == false) {
-			self.openDocuments = [];
-		}
-		if (document.uri.scheme == 'file' && in_array(document.fileName, self.openDocuments) == true) {
-			self.openDocuments = self.openDocuments.filter(function (item) {
-				return item != document.fileName;
-			});
-			setTimeout(function () {
-				self.emit('documentClose', document);
-			})
-		}
-	});
-}
-
-//extension
 /**
  * @param {Application} application
  */
 var FoldTypes = function (application) {
-
+	
 	var self = this;
 
 	//private vars
@@ -652,7 +161,7 @@ var FoldTypes = function (application) {
 		return parentLines;
 	}
 
-	let elementTypes = ['head', 'body', 'div', 'ul', 'a', 'select', 'button', 'script', 'style', 'table', 'tbody', 'thead', 'tfoot', 'tfoot', 'tfoot', 'tr', 'td', 'th'];
+	let elementFoldTypes = ['head', 'body', 'div', 'ul', 'a', 'select', 'button', 'script', 'style', 'table', 'tbody', 'thead', 'tfoot', 'tfoot', 'tfoot', 'tr', 'td', 'th'];
 	let elementVoids = ['area', 'base', 'br', 'col', 'command', 'embed', 'hr', 'img', 'input', 'keygen', 'link', 'meta', 'param', 'path', 'source', 'track', 'wbr'];
 
 	function getDocumentLines() {
@@ -661,18 +170,18 @@ var FoldTypes = function (application) {
 			return cache.documentLines;
 		}
 
-		cacheDocumentLines();
+		cache.documentLines = application.getDocumentLinesInfo();
 
 		var open_bracket = new RegExp('\\{', 'g');
 		var close_bracket = new RegExp('\\}', 'g');
-		var open_brace = new RegExp('\\[', 'g');
-		var close_brace = new RegExp('\\]', 'g');
 
-		var level = 0;
 		var hasJs = false;
 		for (var i in cache.documentLines) {
 
 			let line_x = parseInt(i);
+
+			cache.documentLines[line_x]['isFoldType'] = false;
+			cache.documentLines[line_x]['isFoldEnabled'] = false;
 
 			//comments already flagged in cacheDocumentLines();
 			if (cache.documentLines[line_x]['lineType'] == "comment") {
@@ -703,6 +212,8 @@ var FoldTypes = function (application) {
 				continue;
 			}
 
+
+
 		}
 
 		var jsCommentFoldEnabled = hasJs && getFoldEnabled("comment", "js");
@@ -719,7 +230,7 @@ var FoldTypes = function (application) {
 				var valid = false;
 				while (line_x < cache.documentLines.length) {
 					var line = cache.documentLines[line_x];
-					if (line['text'].indexOf(" var ") > -1 || line['text'].indexOf(" function ") > -1 || line['text'].indexOf(" class ") > -1) {
+					if (line['textFormatted'].indexOf(" var ") > -1 || line['textFormatted'].indexOf(" function ") > -1 || line['textFormatted'].indexOf(" class ") > -1) {
 						valid = true;
 					}
 					if (in_array(line['lineType'], ["", "comment"])) {
@@ -747,12 +258,12 @@ var FoldTypes = function (application) {
 
 			for (var i in switch_lines) {
 				var line_x = parseInt(switch_lines[i]['line']);
-				var next_line = cache.documentLines[line_x]['text'];
+				var next_line = cache.documentLines[line_x]['textFormatted'];
 				var switchBracketCount = (next_line.match(open_bracket) || []).length
 				while (switchBracketCount > 0) {
 
 					line_x++;
-					next_line = cache.documentLines[line_x]['text'];
+					next_line = cache.documentLines[line_x]['textFormatted'];
 					switchBracketCount += (next_line.match(open_bracket) || []).length
 					switchBracketCount -= (next_line.match(close_bracket) || []).length
 					var isCase = next_line.indexOf(" case ") > -1;
@@ -762,11 +273,11 @@ var FoldTypes = function (application) {
 						var code_data = new RegExp('[^\\{\\}: ~]', 'g');
 						//found case with no brackets
 						var x = line_x + 1;
-						next_line = cache.documentLines[x]['text'];
+						next_line = cache.documentLines[x]['textFormatted'];
 						var hasData = false; //default behavior requires data to fold
 						var b = switchBracketCount;
 						while (b > 0 && next_line.indexOf(" case ") == -1 && next_line.indexOf(" default ") == -1 && hasData == false) {
-							next_line = cache.documentLines[x]['text'];
+							next_line = cache.documentLines[x]['textFormatted'];
 							//data required
 							hasData = hasData || (next_line.match(code_data) || []).length > 0;
 							b += (next_line.match(open_bracket) || []).length
@@ -783,423 +294,14 @@ var FoldTypes = function (application) {
 			}
 		}
 
+		//console.log(cache.documentLines);
+
 		return cache.documentLines;
-	}
-	function cacheDocumentLines() {
-
-		var lines = application.documentLines();
-
-		var fileType = application.documentType();
-		var syntax = null;
-		if (in_array(fileType, ['js', 'ts', 'jsx', 'tsx']) == true) {
-			syntax = 'js';
-		}
-		if (in_array(fileType, ['css']) == true) {
-			syntax = 'css';
-		}
-		if (in_array(fileType, ['htm', 'html']) == true) {
-			syntax = 'html';
-		}
-		if (in_array(fileType, ['php']) == true) {
-			syntax = 'php';
-		}
-
-		var in_comment_block = false;
-
-		cache.documentLines = new Array;
-
-		cache.php_open = false;
-		cache.html_open_tag = false;
-		cache.html_in_tag = false;
-		cache.html_open_script = false;
-		cache.html_open_style = false;
-		cache.php_js_open = false;
-		cache.php_css_open = false;
-		cache.php_syntax = ''
-
-		for (var i in lines) {
-
-			let line_x = parseInt(i);
-			let lineTemp = lines[line_x];
-
-			lineTemp = str_replace("\t", " ", lineTemp); //make sure key words have spaces around them
-
-			let line = " " + lineTemp + " ~"; //add leading ws and eol
-
-			cache.documentLines[line_x] = {};
-			cache.documentLines[line_x]['syntax'] = '';
-			line = str_replace("(", " ( ", line); //make sure key words have spaces around them
-			line = str_replace(")", " ) ", line); //make sure key words have spaces around them
-			line = str_replace("{", " { ", line); //make sure key words have spaces around them
-			line = str_replace("}", " } ", line); //make sure key words have spaces around them
-			line = str_replace("[", " [ ", line); //make sure key words have spaces around them
-			line = str_replace("]", " ] ", line); //make sure key words have spaces around them
-			line = str_replace("=", " = ", line); //make sure key words have spaces around them
-			line = str_replace(";", " ; ", line); //make sure key words have spaces around them
-			line = str_replace(":", " : ", line); //make sure key words have spaces around them
-
-			var newLine = "";
-			var match_length = 0;
-			var match_lock = "";
-			var in_comment_line = false;
-			var in_quote_str = false;
-			var in_reg_str = false;
-			var in_reg_str_start = false;
-			var in_single_quote_str = false;
-			var in_double_quote_str = false;
-
-			for (var o in line) {
-				var char_x = parseInt(o);
-				var char = line[char_x];
-				var prev_char = char_x > 0 ? line[char_x - 1] : '';
-				var prev2_char = char_x > 1 ? line[char_x - 2] : '';
-				var next_char = char_x < line.length ? line[char_x + 1] : '';
-
-				//in line comment
-				if (match_lock == "" || match_lock == "in_comment_line") {
-					if (in_comment_line == false && char == "/" && next_char == "/") {
-						in_comment_line = true;
-						match_length = 2;
-						match_lock = "in_comment_line"; //resets on next line
-					}
-					if (in_comment_line == true) {
-						if (match_length > 0) {
-							match_length--;
-						} else {
-							continue;
-						}
-					}
-				}
-
-				//block comment
-				if (match_lock == "" || match_lock == "in_comment_block") {
-					if (in_comment_block == false && char == "/" && next_char == "*") {
-						match_length = 2;
-						in_comment_block = true;
-						match_lock = "in_comment_block";
-					}
-					if (in_comment_block == true && char == "*" && next_char == "/") {
-						in_comment_block = false;
-						match_lock = "";//not accurate... still prints "*/". potential to mark fold row as other
-					}
-					if (in_comment_block == true) {
-						if (match_length > 0) {
-							match_length--;
-						} else {
-							continue;
-						}
-					}
-				}
-
-				//quote
-				if (match_lock == "" || match_lock == "in_quote_str") {
-					if (char == "`" && (prev_char != "\\" || prev2_char == "\\")) {
-						match_length = 1;
-						in_quote_str = !in_quote_str;
-						match_lock = in_quote_str ? "in_quote_str" : "";
-					}
-					if (in_quote_str == true) {
-						if (match_length > 0) {
-							match_length--;
-						} else {
-							continue;
-						}
-					}
-				}
-
-				//single quote
-				if (match_lock == "" || match_lock == "in_single_quote_str") {
-					if (char == "'" && (prev_char != "\\" || prev2_char == "\\")) {
-						match_length = 1;
-						in_single_quote_str = !in_single_quote_str;
-						match_lock = in_single_quote_str ? "in_single_quote_str" : "";
-					}
-					if (in_single_quote_str == true) {
-						if (match_length > 0) {
-							match_length--;
-						} else {
-							continue;
-						}
-					}
-				}
-
-				//double quote
-				if (match_lock == "" || match_lock == "in_double_quote_str") {
-					if (char == '"' && (prev_char != "\\" || prev2_char == "\\")) {
-						match_length = 1;
-						in_double_quote_str = !in_double_quote_str;
-						match_lock = in_double_quote_str ? "in_double_quote_str" : "";
-					}
-					if (in_double_quote_str == true) {
-						if (match_length > 0) {
-							match_length--;
-						} else {
-							continue;
-						}
-					}
-				}
-
-				//reg string
-				if (match_lock == "" || match_lock == "in_reg_str") {
-					//detecting regex is hard... this will likely need to be updated
-					if (in_reg_str_start == false && char == "/" && (is_array(next_char.match(/[a-zA-Z0-9^+\[\\(<]/)) || (prev_char == " " && in_array(prev2_char, ['(', ',', '=', '[', ':']))) && prev_char != "*" && prev_char != "\\" && prev_char != "<") {
-						match_length = 1;
-						in_reg_str = true;
-						match_lock = in_reg_str ? "in_reg_str" : "";
-						in_reg_str_start = true;
-					} else if (in_reg_str_start && char == "/" && prev_char != "\\" && prev_char != "*") {
-						in_reg_str = false;
-						in_reg_str_start = false;
-					}
-					if (in_reg_str == true) {
-						if (match_length > 0) {
-							match_length--;
-						} else {
-							continue;
-						}
-					}
-				}
-
-				//white space
-				if (char === " ") {
-					if (prev_char == " ") {
-						continue;
-					}
-				}
-
-				newLine += char;
-			}
-
-			cache.documentLines[line_x]['line'] = line_x;
-
-			cache.documentLines[line_x]['level'] = 0;
-			cache.documentLines[line_x]['lineType'] = "";
-			cache.documentLines[line_x]['text'] = "";
-
-			if (fileType == 'php') {
-				syntax = '';
-
-				if (cache.php_open) {
-					syntax = 'php';
-					cache.php_syntax = '';
-				}
-				if (cache.php_js_open) {
-					cache.php_syntax = 'js';
-				}
-				if (cache.php_css_open) {
-					cache.php_syntax = 'css';
-				}
-
-				let openWait = false;
-				let char_x = 0;
-				while (char_x < line.length) {
-					let html_open_tag_start = false
-					if (line.indexOf('<?', char_x) == char_x) {
-						cache.php_open = true;
-					}
-					if (cache.php_open == true && line.indexOf('?>', char_x) == char_x) {
-						cache.php_open = false;
-					}
-					if (cache.php_open == false) {
-
-						if (cache.php_js_open && openWait==false) {
-							cache.php_syntax = 'js';
-						}
-						if (cache.php_css_open && openWait==false) {
-							cache.php_syntax = 'css';
-						}
-
-						if (cache.html_open_tag == true && line.indexOf('>', char_x) == char_x) {
-							//php opened inside the attributes of a tag
-							if (cache.html_open_script) {
-								openWait = true;
-								cache.html_open_script = false;
-								cache.php_js_open = true; //mark for next row
-							}
-							if (cache.html_open_style) {
-								openWait = true;
-								cache.html_open_style = false;
-								cache.php_css_open = true; //mark for next row
-							}
-							cache.php_syntax = 'html'; //put it back
-							cache.html_open_tag = false;
-						}
-						if (cache.html_open_tag == false && (cache.php_syntax === '' || cache.php_syntax === 'html') && line.indexOf('<', char_x) == char_x && /[a-zA-Z]/.test(line[char_x + 1])) {
-							cache.php_syntax = 'html'
-							cache.html_open_tag = true;
-							html_open_tag_start = true;
-							cache.html_in_tag = true;
-						}
-						if (cache.php_syntax == 'html' && html_open_tag_start && line.indexOf('<script', char_x) == char_x) {
-							cache.html_open_script = true;
-						}
-						if (cache.php_syntax == 'html' && html_open_tag_start && line.indexOf('<styl', char_x) == char_x) {
-							cache.html_open_style = true;
-						}
-						if (cache.php_js_open && line.indexOf('</script', char_x) == char_x) {
-							cache.php_js_open = false;
-							cache.php_syntax = 'html'
-						}
-						if (cache.php_css_open && line.indexOf('</style', char_x) == char_x) {
-							cache.php_css_open = false;
-							cache.php_syntax = 'html'
-						}
-						if(cache.html_in_tag==true && (cache.php_syntax === '' || cache.php_syntax === 'html')){
-							cache.php_syntax = 'html'
-							if(line.indexOf('</', char_x) == char_x){
-								cache.html_in_tag = false;
-							}
-						}
-					}
-
-					char_x++;
-				}
-
-				if (cache.php_syntax != '') {
-					syntax = cache.php_syntax;
-				}
-
-				if (syntax == "html") {
-
-					cache.documentLines[line_x]['idAttribute'] = false;
-					cache.documentLines[line_x]['elementTagPos'] = null;
-					cache.documentLines[line_x]['elementTag'] = "";
-
-					let foundOpenTag = false;
-					let isTag = false;
-					let isComment = false;
-					let charX = 0;
-					let tag = "";
-					let tags = [];
-					let tagsPos = [];
-					while (charX < newLine.length) {
-
-						if (isTag == false && newLine[charX] == '<' && newLine[charX + 1] == '!' && isset(newLine[charX + 2]) && newLine[charX + 2] == '-' && isset(newLine[charX + 3]) && newLine[charX + 3] == '-') {
-							cache.documentLines[line_x]['lineType'] = 'comment';
-							isComment = true;
-						} else if (isTag == false && isComment == true) {
-							if (newLine[charX] == '-' && newLine[charX + 1] == '-' && isset(newLine[charX + 2]) && newLine[charX + 2] == '>') {
-								isComment = false;
-								cache.documentLines[line_x]['lineType'] = '';
-							}
-						}
-
-						if (isComment == false) {
-							if (isTag == false && newLine[charX] == '<' && /[a-zA-Z]/.test(newLine[charX + 1])) {
-								isTag = true;
-							} else if (isTag && (newLine[charX] == ' ' || newLine[charX] == ">")) {
-								isTag = false;
-								foundOpenTag = true;
-							}
-
-							if (isTag && newLine[charX] !== '<') {
-								tag += newLine[charX];
-							}
-							if (foundOpenTag) {
-								foundOpenTag = false;
-								tags.push(tag);
-								tagsPos.push(charX);
-								tag = "";
-							}
-
-							if (newLine[charX] == "/" && newLine[charX - 1] == "<") {
-								//close tag
-								tags.pop();
-								tagsPos.pop();
-							}
-						}
-
-						charX++;
-					}
-
-					if (tags.length > 0) {
-						//keep the last open tag
-						let lastTag = tags[tags.length - 1];
-						let lastTagPos = tagsPos[tagsPos.length - 1];
-						if (newLine.indexOf('id = ""', lastTagPos) > -1 && in_array(lastTag, elementVoids) == false) {
-							cache.documentLines[line_x]['idAttribute'] = true;
-						}
-
-						cache.documentLines[line_x]['elementTag'] = lastTag == 'th' ? 'td' : lastTag;
-						cache.documentLines[line_x]['elementTags'] = tags;
-					}
-
-				}
-
-			}
-			cache.documentLines[line_x]['syntax'] = syntax;
-			cache.documentLines[line_x]['isFoldType'] = false;
-			cache.documentLines[line_x]['isFoldEnabled'] = false;
-
-
-			if (in_array(syntax, ['css', 'js', 'php'])) {
-				//php is weird and requires well formed where as javascript does not
-				if (isset(cache.well_formed_comment_block) == false) {
-					if (line.indexOf("/*") > -1) {
-						var x = line_x + 1;
-						cache.well_formed_comment_block = false;
-						if (line.indexOf("*/") == -1) {
-							//not in line
-							var comment_star_pos = line.indexOf("*");
-							cache.well_formed_comment_block = true
-							//check for well formed comment
-							while (x < lines.length) {
-								var next_line = lines[x];
-								if (syntax !== "js" && next_line.indexOf('*') !== comment_star_pos) {
-									cache.well_formed_comment_block = false;
-									break;
-								}
-								if (next_line.indexOf("*/") > -1) {
-									break;
-								}
-								x++;
-							}
-						}
-
-						if (is_true(cache.well_formed_comment_block) == false) {
-							//either exists on a single line not well formed
-
-							cache.well_formed_comment_block = null;
-							var start = line.indexOf("/*") - 1
-							var end = line.indexOf("*/") > -1 ? line.indexOf("*/") + 2 : null;
-							line = line.slice(0, start) + (end !== null ? line.slice(end, line.length) : "");  //strip out comment
-							let y = line_x + 1;
-
-							while (y < x) {
-								var next_line = lines[y];
-								if (next_line.indexOf("*/") > -1) {
-									line = line.slice(next_line.indexOf("*/") + 2, line.length);  //strip out comment
-									break;
-								}
-								if (next_line.indexOf('*') !== comment_star_pos) {
-									line = ""; //strip out comment
-								}
-								y++;
-							}
-
-						} else {
-							cache.documentLines[line_x]['lineType'] = "comment";
-						}
-					}
-				}
-
-				if (is_true(cache.well_formed_comment_block)) {
-					if (line.indexOf("*/") > -1) {
-						cache.well_formed_comment_block = null;
-					}
-				}
-			}
-
-			cache.documentLines[line_x]['text'] = newLine;
-
-		}
-
-		console.log(cache.documentLines)
 	}
 	function cacheDocumentJsLine(line_x) {
 
-		var bracketStart = cache.documentLines[line_x]['text'].lastIndexOf("{");
-		var braceStart = cache.documentLines[line_x]['text'].lastIndexOf("[");
+		var bracketStart = cache.documentLines[line_x]['textFormatted'].lastIndexOf("{");
+		var braceStart = cache.documentLines[line_x]['textFormatted'].lastIndexOf("[");
 		var lineCount = 0;
 		var parens = 0;
 		var is_parens = false;
@@ -1213,14 +315,11 @@ var FoldTypes = function (application) {
 			let isParam = false;
 			//look backwards until finding operator
 			while (line_xx > -1 && max_lines > 0) {
-				var text = cache.documentLines[line_xx]['text'];
+				var text = cache.documentLines[line_xx]['textFormatted'];
 				let char_x = start ? braceStart - 1 : text.length;
-				console.log('---')
-				console.log(line_xx)
-				console.log(char_x);
+
 				while (char_x > 0) {
-					console.log(text);
-					console.log(char_x);
+
 					if (text[char_x].match(/[a-zA-Z0-9\]]/) !== null) {
 						//found previous block so this is a param key
 						isParam = true;
@@ -1235,12 +334,12 @@ var FoldTypes = function (application) {
 						cache.documentLines[line_xx]['lineType'] = "array";
 						break;
 					}
-					if (text[char_x] == "|" || text[char_x-1] == "|") {
-						cache.documentLines[line_xx]['lineType'] = "array"; 
+					if (text[char_x] == "|" || text[char_x - 1] == "|") {
+						cache.documentLines[line_xx]['lineType'] = "array";
 						break;
 					}
-					if (text[char_x] == "&" || text[char_x-1] == "&") {
-						cache.documentLines[line_xx]['lineType'] = "array"; 
+					if (text[char_x] == "&" || text[char_x - 1] == "&") {
+						cache.documentLines[line_xx]['lineType'] = "array";
 						break;
 					}
 					if (text[char_x] == "(" || text[char_x] == ",") {
@@ -1277,7 +376,7 @@ var FoldTypes = function (application) {
 			while (line_xxx < cache.documentLines.length) {
 				lineCount++;
 				if (cache.documentLines[line_xxx]['syntax'] == 'js') {
-					let text = cache.documentLines[line_xxx]['text'];
+					let text = cache.documentLines[line_xxx]['textFormatted'];
 					while (char_x < text.length) {
 						if (text[char_x] == "[") {
 							braceCount++;
@@ -1320,7 +419,7 @@ var FoldTypes = function (application) {
 			let start = true;
 			while (line_xx > -1 && max_lines > 0) {
 
-				var text = cache.documentLines[line_xx]['text'];
+				var text = cache.documentLines[line_xx]['textFormatted'];
 				let char_x = start ? bracketStart : text.length;
 
 				var check_line = text;
@@ -1437,7 +536,7 @@ var FoldTypes = function (application) {
 			while (line_xxx < cache.documentLines.length) {
 				lineCount++;
 				if (cache.documentLines[line_xxx]['syntax'] == 'js') {
-					let text = cache.documentLines[line_xxx]['text'];
+					let text = cache.documentLines[line_xxx]['textFormatted'];
 					while (char_x < text.length) {
 						if (text[char_x] == "{") {
 							bracketCount++;
@@ -1482,9 +581,9 @@ var FoldTypes = function (application) {
 	}
 	function cacheDocumentPhpLine(line_x) {
 
-		var bracketStart = cache.documentLines[line_x]['text'].lastIndexOf("{");
-		var braceStart = cache.documentLines[line_x]['text'].lastIndexOf("[");
-		var arrayStart = cache.documentLines[line_x]['text'].lastIndexOf(" array ");
+		var bracketStart = cache.documentLines[line_x]['textFormatted'].lastIndexOf("{");
+		var braceStart = cache.documentLines[line_x]['textFormatted'].lastIndexOf("[");
+		var arrayStart = cache.documentLines[line_x]['textFormatted'].lastIndexOf(" array ");
 		var lineCount = 0;
 
 		if (arrayStart > -1 && arrayStart > bracketStart) {
@@ -1497,7 +596,7 @@ var FoldTypes = function (application) {
 
 			// while (line_xxx < cache.documentLines.length && lineCount < 3) {
 			while (line_xxx < cache.documentLines.length) {
-				let line = cache.documentLines[line_xxx]['text'];
+				let line = cache.documentLines[line_xxx]['textFormatted'];
 				if (cache.documentLines[line_xxx]['syntax'] == 'php') {
 					while (char_x < line.length) {
 						if (line[char_x] == "(") {
@@ -1546,7 +645,7 @@ var FoldTypes = function (application) {
 			//look backwards until finding operator
 			while (line_xx > -1 && max_lines > 0) {
 				if (cache.documentLines[line_xx]['syntax'] == 'php') {
-					var text = cache.documentLines[line_xx]['text'];
+					var text = cache.documentLines[line_xx]['textFormatted'];
 					let char_x = start ? braceStart - 1 : text.length;
 					while (char_x > 0) {
 
@@ -1598,7 +697,7 @@ var FoldTypes = function (application) {
 				while (line_xxx < cache.documentLines.length) {
 					lineCount++;
 					if (cache.documentLines[line_xxx]['syntax'] == 'php') {
-						let line = cache.documentLines[line_xxx]['text'];
+						let line = cache.documentLines[line_xxx]['textFormatted'];
 						while (char_x < line.length) {
 							if (line[char_x] == "[") {
 								braceCount++;
@@ -1648,7 +747,7 @@ var FoldTypes = function (application) {
 
 				if (cache.documentLines[line_xx]['syntax'] == 'php') {
 
-					var text = cache.documentLines[line_xx]['text'];
+					var text = cache.documentLines[line_xx]['textFormatted'];
 					let char_x = start ? bracketStart : text.length;
 
 					let check_line = text;
@@ -1741,7 +840,7 @@ var FoldTypes = function (application) {
 			while (line_xxx < cache.documentLines.length) {
 				lineCount++;
 				if (cache.documentLines[line_xxx]['syntax'] == 'php') {
-					let text = cache.documentLines[line_xxx]['text'];
+					let text = cache.documentLines[line_xxx]['textFormatted'];
 					while (char_x < text.length) {
 						if (text[char_x] == "{") {
 							bracketCount++;
@@ -1784,7 +883,7 @@ var FoldTypes = function (application) {
 	}
 	function cacheDocumentCssLine(line_x) {
 
-		var bracketStart = cache.documentLines[line_x]['text'].lastIndexOf("{");
+		var bracketStart = cache.documentLines[line_x]['textFormatted'].lastIndexOf("{");
 		var lineCount = 0;
 
 		if (bracketStart > -1) {
@@ -1799,7 +898,7 @@ var FoldTypes = function (application) {
 			while (line_xxx < cache.documentLines.length) {
 				lineCount++;
 				if (cache.documentLines[line_xxx]['syntax'] == 'css') {
-					let text = cache.documentLines[line_xxx]['text'];
+					let text = cache.documentLines[line_xxx]['textFormatted'];
 					while (char_x < text.length) {
 						if (text[char_x] == "{") {
 							bracketCount++;
@@ -1849,27 +948,35 @@ var FoldTypes = function (application) {
 			return;
 		}
 
-		if (isset(cache.documentLines[line_x]['elementTag']) && cache.documentLines[line_x]['elementTag'] != '') {
+		if (Object.keys(cache.documentLines[line_x]['html']['elements']).length > 0) {
 
-			var x = cache.documentLines[line_x]['elementTags'].length - 1;
-			var openCountStart = 1;
-			while (x >= 0) {
+			let elements = cache.documentLines[line_x]['html']['elements'];
 
-				//found foldType. get lines and mark levels. set lineType
+			//keep the last open tag
+			let lastOpenTag = '';
+			let lastOpenKey = null;
+			for (var key in elements) {
+				let isLastOpen = elements[key]['isLastOpen'];
+				if (isLastOpen == true) {
+					lastOpenTag = elements[key]['tag'];
+					lastOpenKey = key;
+				}
+			}
+			if (lastOpenTag != '') {
+
 				let line_xx = line_x + 1; //start on next line
 				let lineCount = 1;
-				let openCount = openCountStart++;
-
+				let openCount = 1;
 				while (line_xx < cache.documentLines.length) {
 					lineCount++;
 					if (cache.documentLines[line_xx]['syntax'] == 'html') {
 						let char_x = 0;
-						text = cache.documentLines[line_xx]['text'];
+						text = cache.documentLines[line_xx]['textFormatted'];
 						while (char_x < text.length) {
 							if (text[char_x] == '<' && /[a-zA-Z]/.test(text[char_x + 1])) {
 								let isVoid = false;
-								for (var i in elementVoids) {
-									if (text.indexOf(elementVoids[i]) === char_x + 1) {
+								for (var key in elementVoids) {
+									if (text.indexOf(elementVoids[key]) === char_x + 1) {
 										isVoid = true;
 										break;
 									}
@@ -1892,66 +999,50 @@ var FoldTypes = function (application) {
 					}
 					line_xx++;
 				}
-				if (x == cache.documentLines[line_x]['elementTags'].length - 1) {
-					if (lineCount < 3) {
-						cache.documentLines[line_x]['lineType'] = "";
-					} else {
-
-						if (in_array(cache.documentLines[line_x]['elementTag'], elementTypes)) {
-							let tag = cache.documentLines[line_x]['elementTag'];
-							if (in_array(tag, ['td', 'th'])) {
-								tag = 'tableTd';
-							}
-							if (tag == 'tr') {
-								tag = 'tableTr';
-							}
-							if (tag == 'tbody') {
-								tag = 'tableTbody';
-							}
-							if (tag == 'thead') {
-								tag = 'tableThead';
-							}
-							if (tag == 'tfoot') {
-								tag = 'tableTfoot';
-							}
-
-							cache.documentLines[line_x]['lineType'] = tag;
-							setFoldInfo(line_x);
-						}
-
-						if (cache.documentLines[line_x]['isFoldEnabled'] == false && cache.documentLines[line_x]['idAttribute']) {
-							cache.documentLines[line_x]['lineType'] = 'idAttribute';
-						}
-
-						if (cache.documentLines[line_x]['lineType'] != '') {
-							let foldStartLine = line_x + 1;
-							let foldEndLine = line_xx;
-							while (foldStartLine < foldEndLine) {
-								if (cache.documentLines[foldStartLine]['syntax'] == 'html') {
-									cache.documentLines[foldStartLine]['level']++;
-								}
-								foldStartLine++;
-							}
-						}
-					}
+				cache.documentLines[line_x]['lineCount'] = lineCount;
+				cache.documentLines[line_x]['lineEnd'] = line_x + (lineCount - 1);
+				if (lineCount < 3) {
+					cache.documentLines[line_x]['lineType'] = "";
 				} else {
-					if (lineCount >= 3) {
-						let foldStartLine = line_x + 1;
-						let foldEndLine = line_xx;
-						while (foldStartLine < foldEndLine) {
-							if (cache.documentLines[foldStartLine]['syntax'] == 'html') {
-								cache.documentLines[foldStartLine]['level']++;
+					if (in_array(elements[lastOpenKey]['tag'], elementFoldTypes)) {
+						let tag = lastOpenTag;
+						if (in_array(tag, ['td', 'th'])) {
+							tag = 'tableTd';
+						}
+						if (tag == 'tr') {
+							tag = 'tableTr';
+						}
+						if (tag == 'tbody') {
+							tag = 'tableTbody';
+						}
+						if (tag == 'thead') {
+							tag = 'tableThead';
+						}
+						if (tag == 'tfoot') {
+							tag = 'tableTfoot';
+						}
+
+						cache.documentLines[line_x]['lineType'] = tag;
+						setFoldInfo(line_x);
+
+						if (cache.documentLines[line_x]['isFoldEnabled'] == false) {
+							if(isset(elements[lastOpenKey]['attributes']['id'])){
+								cache.documentLines[line_x]['lineType'] = "idAttribute";
+								setFoldInfo(line_x);
 							}
-							foldStartLine++;
 						}
 					}
 				}
 
-				x--;
-			}
+				let foldStartLine = line_x + 1;
+				let foldEndLine = line_xx;
+				while (foldStartLine < foldEndLine) {
+					if (cache.documentLines[foldStartLine]['syntax'] == 'html') {
+						cache.documentLines[foldStartLine]['level']++;
+					}
+					foldStartLine++;
+				}
 
-			if (cache.documentLines[line_x]['lineType'] != "") {
-				setFoldInfo(line_x);
 			}
 		}
 
@@ -2073,6 +1164,7 @@ var FoldTypes = function (application) {
 		if (fallback('editor.foldAll')) {
 			return;
 		}
+
 		cache = {};
 
 		var cursorPosition = application.editorCursorPosition();
@@ -2167,12 +1259,8 @@ var FoldTypes = function (application) {
 
 }
 
-/**
- * @param {vscode.ExtensionContext} _context
- */
-function activate(_context) {
-	context = _context
-	var application = new Application();
+function activate(context) {
+	var application = new Application(context);
 	var foldTypes = new FoldTypes(application);
 	application.registerCommand('fold-types.fold-all', async function () {
 		await foldTypes.foldAll();
@@ -2189,7 +1277,6 @@ function activate(_context) {
 	application.registerCommand('fold-types.unfold-parent', async function () {
 		await foldTypes.unFoldParent();
 	});
-
 	application.activate(); //call last so any registered events are emitted
 }
 
