@@ -2,14 +2,14 @@
 	"name": "fold-types",
 	"displayName": "Fold Types",
 	"description": "Fold enabled types (class, methods, etc..) instead of levels",
-	"version": "1.0.10",
+	"version": "1.0.11",
 	"publisher": "outofsync42",
 	"license": "MIT",
 	"repository": {
 		"type": "GitHub",
 		"url": "https://github.com/outofsync42/fold-types"
 	},
-	"icon": "logo.png",
+	"icon": "img/icon.png",
 	"engines": {
 		"vscode": "^1.67.0"
 	},
@@ -132,8 +132,7 @@
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
 						"default": "No",
 						"description": "JavaScript: Fold objects when used as parameter in function calls"
@@ -271,7 +270,7 @@
 							"No"
 						],
 						"default": "No",
-						"description": "Global: Fold Comments"
+						"description": "JavaScript: Fold Comments"
 					}
 				}
 			},
@@ -595,10 +594,9 @@
 						"type": "string",
 						"enum": [
 							"Yes",
-							"No",
-							"Use Global"
+							"No"
 						],
-						"default": "Use Global",
+						"default": "No",
 						"description": "HTML: Fold comments."
 					}
 				}
@@ -615,6 +613,15 @@
 						],
 						"default": "Yes",
 						"description": "CSS: Fold Block"
+					},
+					"fold-types.css.comment": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "CSS: Fold Comments"
 					}
 				}
 			}

@@ -26,7 +26,7 @@ Example setting that demonstrates folding effect with "fold-types.php.class" set
 ```
 With "fold-types.php.class" set to false, when the "fold-types.fold-all" command is executed, only the functions are folded leaving the class un-collapsed allowing for a faster, intuitive navigation to the code you are trying to find.
 
-![Command Palette](https://raw.githubusercontent.com/outofsync42/fold-types/master/images/fold-type-fol-all.gif)
+![Command Palette](https://raw.githubusercontent.com/outofsync42/fold-types/master/img/fold-type-fol-all.gif)
 
 
 # Commands
@@ -55,7 +55,7 @@ You can and should still use the existing **editor.unfoldAll** command to unfold
 ## How to use
 Type "Fold Types" in the command palette to find the commands but its recommended you assign hot keys.
 
-![Command Palette](https://raw.githubusercontent.com/outofsync42/fold-types/master/images/comand-palette.png)
+![Command Palette](https://raw.githubusercontent.com/outofsync42/fold-types/master/img/comand-palette.png)
 
 # Configuration Settings
 
@@ -134,5 +134,6 @@ Only the most common tags have been included but if there are some that the comm
 ### How to configure settings
 The easiest way to configure enabled types is to right click on the extension in your extensions list and select "Extension Settings".
 
-![Right Click Extension](https://raw.githubusercontent.com/outofsync42/fold-type/master/images/right-click-extension.png)
-![Extension Settings](https://raw.githubusercontent.com/outofsync42/fold-type/master/images/extension-settings.png)
+![Right Click Extension](https://raw.githubusercontent.com/outofsync42/fold-type/master/img/right-click-extension.png)
+
+![Extension Settings](https://raw.githubusercontent.com/outofsync42/fold-type/master/img/extension-settings.png)

@@ -183,12 +183,6 @@ var FoldTypes = function (application) {
 			cache.documentLines[line_x]['isFoldType'] = false;
 			cache.documentLines[line_x]['isFoldEnabled'] = false;
 
-			//comments already flagged in cacheDocumentLines();
-			if (cache.documentLines[line_x]['lineType'] == "comment") {
-				setFoldInfo(line_x);
-				continue;
-			}
-
 			var syntax = cache.documentLines[line_x]['syntax'];
 
 			if (syntax == "js") {
@@ -211,8 +205,6 @@ var FoldTypes = function (application) {
 				cacheDocumentHtmlLine(line_x);
 				continue;
 			}
-
-
 
 		}
 
@@ -294,11 +286,18 @@ var FoldTypes = function (application) {
 			}
 		}
 
-		//console.log(cache.documentLines);
-
 		return cache.documentLines;
 	}
 	function cacheDocumentJsLine(line_x) {
+
+		//application already flags and clears comment start and stops.
+		//only need to check for open chars to know if wellformed comment exists as line
+		//no need to set levels
+		if (cache.documentLines[line_x]['textFormatted'].lastIndexOf('/*') >-1) {
+			cache.documentLines[line_x]['lineType'] = 'comment';
+			setFoldInfo(line_x);
+			return;
+		}
 
 		var bracketStart = cache.documentLines[line_x]['textFormatted'].lastIndexOf("{");
 		var braceStart = cache.documentLines[line_x]['textFormatted'].lastIndexOf("[");
@@ -580,6 +579,15 @@ var FoldTypes = function (application) {
 
 	}
 	function cacheDocumentPhpLine(line_x) {
+
+		//application already flags and clears comment start and stops.
+		//only need to check for open chars to know if wellformed comment exists as line
+		//no need to set levels
+		if (cache.documentLines[line_x]['textFormatted'].lastIndexOf('/*') >-1) {
+			cache.documentLines[line_x]['lineType'] = 'comment';
+			setFoldInfo(line_x);
+			return;
+		}
 
 		var bracketStart = cache.documentLines[line_x]['textFormatted'].lastIndexOf("{");
 		var braceStart = cache.documentLines[line_x]['textFormatted'].lastIndexOf("[");
@@ -882,6 +890,15 @@ var FoldTypes = function (application) {
 
 	}
 	function cacheDocumentCssLine(line_x) {
+
+		//application already flags and clears comment start and stops.
+		//only need to check for open chars to know if well formed comment exists as line
+		//no need to set levels
+		if (cache.documentLines[line_x]['textFormatted'].lastIndexOf('/*') >-1) {
+			cache.documentLines[line_x]['lineType'] = 'comment';
+			setFoldInfo(line_x);
+			return;
+		}
 
 		var bracketStart = cache.documentLines[line_x]['textFormatted'].lastIndexOf("{");
 		var lineCount = 0;
@@ -1277,7 +1294,7 @@ function activate(context) {
 	application.registerCommand('fold-types.unfold-parent', async function () {
 		await foldTypes.unFoldParent();
 	});
-	application.activate(); //call last so any registered events are emitted
+	application.activate();
 }
 
 function deactivate() { }
