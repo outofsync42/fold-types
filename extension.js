@@ -7,7 +7,7 @@ require('./lib/functions')();
  * @param {Application} application
  */
 var FoldTypes = function (application) {
-	
+
 	var self = this;
 
 	//private vars
@@ -293,7 +293,7 @@ var FoldTypes = function (application) {
 		//application already flags and clears comment start and stops.
 		//only need to check for open chars to know if wellformed comment exists as line
 		//no need to set levels
-		if (cache.documentLines[line_x]['textFormatted'].lastIndexOf('/*') >-1) {
+		if (cache.documentLines[line_x]['textFormatted'].lastIndexOf('/*') > -1) {
 			cache.documentLines[line_x]['lineType'] = 'comment';
 			setFoldInfo(line_x);
 			return;
@@ -583,7 +583,7 @@ var FoldTypes = function (application) {
 		//application already flags and clears comment start and stops.
 		//only need to check for open chars to know if wellformed comment exists as line
 		//no need to set levels
-		if (cache.documentLines[line_x]['textFormatted'].lastIndexOf('/*') >-1) {
+		if (cache.documentLines[line_x]['textFormatted'].lastIndexOf('/*') > -1) {
 			cache.documentLines[line_x]['lineType'] = 'comment';
 			setFoldInfo(line_x);
 			return;
@@ -894,7 +894,7 @@ var FoldTypes = function (application) {
 		//application already flags and clears comment start and stops.
 		//only need to check for open chars to know if well formed comment exists as line
 		//no need to set levels
-		if (cache.documentLines[line_x]['textFormatted'].lastIndexOf('/*') >-1) {
+		if (cache.documentLines[line_x]['textFormatted'].lastIndexOf('/*') > -1) {
 			cache.documentLines[line_x]['lineType'] = 'comment';
 			setFoldInfo(line_x);
 			return;
@@ -1043,7 +1043,7 @@ var FoldTypes = function (application) {
 						setFoldInfo(line_x);
 
 						if (cache.documentLines[line_x]['isFoldEnabled'] == false) {
-							if(isset(elements[lastOpenKey]['attributes']['id'])){
+							if (isset(elements[lastOpenKey]['attributes']['id'])) {
 								cache.documentLines[line_x]['lineType'] = "idAttribute";
 								setFoldInfo(line_x);
 							}
