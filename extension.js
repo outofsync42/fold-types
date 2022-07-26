@@ -315,7 +315,7 @@ var FoldTypes = function (application) {
 			//look backwards until finding operator
 			while (line_xx > -1 && max_lines > 0) {
 				var text = cache.documentLines[line_xx]['textFormatted'];
-				let char_x = start ? braceStart - 1 : text.length;
+				let char_x = start ? braceStart - 1 : text.length - 1;
 
 				while (char_x > 0) {
 
@@ -654,7 +654,7 @@ var FoldTypes = function (application) {
 			while (line_xx > -1 && max_lines > 0) {
 				if (cache.documentLines[line_xx]['syntax'] == 'php') {
 					var text = cache.documentLines[line_xx]['textFormatted'];
-					let char_x = start ? braceStart - 1 : text.length;
+					let char_x = start ? braceStart - 1 : text.length - 1;
 					while (char_x > 0) {
 
 						if (text[char_x].match(/[a-zA-Z0-9]/) !== null) {
