@@ -3,6 +3,8 @@ const Application = require('./lib/application');
 
 require('./lib/functions')();
 
+var validDocTypes = ['js', 'jsx', 'ts', 'tsx', 'php', 'css', 'html', 'htm']
+
 /**
  * @param {Application} application
  */
@@ -12,31 +14,6 @@ var FoldTypes = function (application) {
 
 	//private vars
 	let cache = {};
-
-	//config data
-	this.getConfiguration = function () {
-		return vscode.workspace.getConfiguration('fold-types');
-	}
-	this.getConfigurationSetting = function (key, default_value) {
-		var subKey = null;
-		if (key.indexOf('.') > -1) {
-			var list = key.split('.');
-			subKey = list[0];
-			key = list[1];
-		}
-		var config = vscode.workspace.getConfiguration('fold-types');
-		var value = null;
-		if (subKey) {
-			value = isset(config[subKey][key]) ? config[subKey][key] : null;
-		} else {
-			value = config[key];
-		}
-		return isset(value) ? value : (isset(default_value) ? default_value : null);
-	}
-	this.isValidDocType = function () {
-		var validDocTypes = ['js', 'jsx', 'ts', 'tsx', 'php', 'css', 'html', 'htm']
-		return in_array(application.documentType(), validDocTypes);
-	}
 
 	function getLinesToFold(lines, isFoldType) {
 		var linesToFold = [];
@@ -614,8 +591,12 @@ var FoldTypes = function (application) {
 						if (line[char_x] == ")") {
 							braceCount--;
 						}
+						if (startLineCount == true && braceCount == 0) {
+							break;
+						}
 						char_x++;
 					}
+					
 					if (startLineCount) {
 						lineCount++;
 					}
@@ -1068,63 +1049,63 @@ var FoldTypes = function (application) {
 		if (isset(cache.foldTypes) == false) {
 			cache.foldTypes = {
 				//javascript overrides
-				'js.class': { enabled: self.getConfigurationSetting('js.class') == "Yes" ? true : false },
-				'js.interface': { enabled: self.getConfigurationSetting('js.interface') == "Yes" ? true : false },
-				'js.method': { enabled: self.getConfigurationSetting('js.method') == "Yes" ? true : false },
-				'js.object': { enabled: self.getConfigurationSetting('js.object') == "Yes" ? true : false },
-				'js.objectFunctionParam': { enabled: self.getConfigurationSetting('js.objectFunctionParam') == "Yes" ? true : false },
-				'js.objectObjectParam': { enabled: self.getConfigurationSetting('js.objectObjectParam') == "Yes" ? true : false },
-				'js.array': { enabled: self.getConfigurationSetting('js.array') == "Yes" ? true : false },
-				'js.arrayParam': { enabled: self.getConfigurationSetting('js.arrayParam') == "Yes" ? true : false },
-				'js.while': { enabled: self.getConfigurationSetting('js.while') == "Yes" ? true : false },
-				'js.for': { enabled: self.getConfigurationSetting('js.for') == "Yes" ? true : false },
-				'js.if': { enabled: self.getConfigurationSetting('js.if') == "Yes" ? true : false },
-				'js.else': { enabled: self.getConfigurationSetting('js.else') == "Yes" ? true : false },
-				'js.switch': { enabled: self.getConfigurationSetting('js.switch') == "Yes" ? true : false },
-				'js.switchCase': { enabled: self.getConfigurationSetting('js.switchCase') == "Yes" ? true : false },
-				'js.switchDefault': { enabled: self.getConfigurationSetting('js.switchDefault') == "Yes" ? true : false },
-				'js.try': { enabled: self.getConfigurationSetting('js.try') == "Yes" ? true : false },
-				'js.tryCatch': { enabled: self.getConfigurationSetting('js.tryCatch') == "Yes" ? true : false },
-				'js.tryFinally': { enabled: self.getConfigurationSetting('js.tryFinally') == "Yes" ? true : false },
-				'js.comment': { enabled: self.getConfigurationSetting('js.comment') == "Yes" ? true : false },
+				'js.class': { enabled: application.getConfigurationSetting('js.class') == "Yes" ? true : false },
+				'js.interface': { enabled: application.getConfigurationSetting('js.interface') == "Yes" ? true : false },
+				'js.method': { enabled: application.getConfigurationSetting('js.method') == "Yes" ? true : false },
+				'js.object': { enabled: application.getConfigurationSetting('js.object') == "Yes" ? true : false },
+				'js.objectFunctionParam': { enabled: application.getConfigurationSetting('js.objectFunctionParam') == "Yes" ? true : false },
+				'js.objectObjectParam': { enabled: application.getConfigurationSetting('js.objectObjectParam') == "Yes" ? true : false },
+				'js.array': { enabled: application.getConfigurationSetting('js.array') == "Yes" ? true : false },
+				'js.arrayParam': { enabled: application.getConfigurationSetting('js.arrayParam') == "Yes" ? true : false },
+				'js.while': { enabled: application.getConfigurationSetting('js.while') == "Yes" ? true : false },
+				'js.for': { enabled: application.getConfigurationSetting('js.for') == "Yes" ? true : false },
+				'js.if': { enabled: application.getConfigurationSetting('js.if') == "Yes" ? true : false },
+				'js.else': { enabled: application.getConfigurationSetting('js.else') == "Yes" ? true : false },
+				'js.switch': { enabled: application.getConfigurationSetting('js.switch') == "Yes" ? true : false },
+				'js.switchCase': { enabled: application.getConfigurationSetting('js.switchCase') == "Yes" ? true : false },
+				'js.switchDefault': { enabled: application.getConfigurationSetting('js.switchDefault') == "Yes" ? true : false },
+				'js.try': { enabled: application.getConfigurationSetting('js.try') == "Yes" ? true : false },
+				'js.tryCatch': { enabled: application.getConfigurationSetting('js.tryCatch') == "Yes" ? true : false },
+				'js.tryFinally': { enabled: application.getConfigurationSetting('js.tryFinally') == "Yes" ? true : false },
+				'js.comment': { enabled: application.getConfigurationSetting('js.comment') == "Yes" ? true : false },
 				//php
-				'php.class': { enabled: self.getConfigurationSetting('php.class') == "Yes" ? true : false },
-				'php.interface': { enabled: self.getConfigurationSetting('php.interface') == "Yes" ? true : false },
-				'php.method': { enabled: self.getConfigurationSetting('php.method') == "Yes" ? true : false },
-				'php.array': { enabled: self.getConfigurationSetting('php.array') == "Yes" ? true : false },
-				'php.arrayFunctionParam': { enabled: self.getConfigurationSetting('php.arrayFunctionParam') == "Yes" ? true : false },
-				'php.arrayObjectParam': { enabled: self.getConfigurationSetting('php.arrayObjectParam') == "Yes" ? true : false },
-				'php.while': { enabled: self.getConfigurationSetting('php.while') == "Yes" ? true : false },
-				'php.for': { enabled: self.getConfigurationSetting('php.for') == "Yes" ? true : false },
-				'php.if': { enabled: self.getConfigurationSetting('php.if') == "Yes" ? true : false },
-				'php.else': { enabled: self.getConfigurationSetting('php.else') == "Yes" ? true : false },
-				'php.switch': { enabled: self.getConfigurationSetting('php.switch') == "Yes" ? true : false },
-				'php.switchCase': { enabled: self.getConfigurationSetting('php.switchCase') == "Yes" ? true : false },
-				'php.switchDefault': { enabled: self.getConfigurationSetting('php.switchDefault') == "Yes" ? true : false },
-				'php.try': { enabled: self.getConfigurationSetting('php.try') == "Yes" ? true : false },
-				'php.tryCatch': { enabled: self.getConfigurationSetting('php.tryCatch') == "Yes" ? true : false },
-				'php.tryFinally': { enabled: self.getConfigurationSetting('php.tryFinally') == "Yes" ? true : false },
-				'php.comment': { enabled: self.getConfigurationSetting('php.comment') == "Yes" ? true : false },
+				'php.class': { enabled: application.getConfigurationSetting('php.class') == "Yes" ? true : false },
+				'php.interface': { enabled: application.getConfigurationSetting('php.interface') == "Yes" ? true : false },
+				'php.method': { enabled: application.getConfigurationSetting('php.method') == "Yes" ? true : false },
+				'php.array': { enabled: application.getConfigurationSetting('php.array') == "Yes" ? true : false },
+				'php.arrayFunctionParam': { enabled: application.getConfigurationSetting('php.arrayFunctionParam') == "Yes" ? true : false },
+				'php.arrayObjectParam': { enabled: application.getConfigurationSetting('php.arrayObjectParam') == "Yes" ? true : false },
+				'php.while': { enabled: application.getConfigurationSetting('php.while') == "Yes" ? true : false },
+				'php.for': { enabled: application.getConfigurationSetting('php.for') == "Yes" ? true : false },
+				'php.if': { enabled: application.getConfigurationSetting('php.if') == "Yes" ? true : false },
+				'php.else': { enabled: application.getConfigurationSetting('php.else') == "Yes" ? true : false },
+				'php.switch': { enabled: application.getConfigurationSetting('php.switch') == "Yes" ? true : false },
+				'php.switchCase': { enabled: application.getConfigurationSetting('php.switchCase') == "Yes" ? true : false },
+				'php.switchDefault': { enabled: application.getConfigurationSetting('php.switchDefault') == "Yes" ? true : false },
+				'php.try': { enabled: application.getConfigurationSetting('php.try') == "Yes" ? true : false },
+				'php.tryCatch': { enabled: application.getConfigurationSetting('php.tryCatch') == "Yes" ? true : false },
+				'php.tryFinally': { enabled: application.getConfigurationSetting('php.tryFinally') == "Yes" ? true : false },
+				'php.comment': { enabled: application.getConfigurationSetting('php.comment') == "Yes" ? true : false },
 				//css
-				'css.block': { enabled: self.getConfigurationSetting('css.block') === "Yes" ? true : false },
+				'css.block': { enabled: application.getConfigurationSetting('css.block') === "Yes" ? true : false },
 				//HTML
-				'html.head': { enabled: self.getConfigurationSetting('html.head') === "Yes" ? true : false },
-				'html.body': { enabled: self.getConfigurationSetting('html.body') === "Yes" ? true : false },
-				'html.div': { enabled: self.getConfigurationSetting('html.div') === "Yes" ? true : false },
-				'html.section': { enabled: self.getConfigurationSetting('html.section') === "Yes" ? true : false },
-				'html.ul': { enabled: self.getConfigurationSetting('html.ul') === "Yes" ? true : false },
-				'html.select': { enabled: self.getConfigurationSetting('html.select') === "Yes" ? true : false },
-				'html.button': { enabled: self.getConfigurationSetting('html.button') === "Yes" ? true : false },
-				'html.table': { enabled: self.getConfigurationSetting('html.table') === "Yes" ? true : false },
-				'html.tableTbody': { enabled: self.getConfigurationSetting('html.tableTbody') === "Yes" ? true : false },
-				'html.tableThead': { enabled: self.getConfigurationSetting('html.tableThead') === "Yes" ? true : false },
-				'html.tableTfoot': { enabled: self.getConfigurationSetting('html.tableTfoot') === "Yes" ? true : false },
-				'html.tableTr': { enabled: self.getConfigurationSetting('html.tableTr') === "Yes" ? true : false },
-				'html.tableTd': { enabled: self.getConfigurationSetting('html.tableTd') === "Yes" ? true : false },
-				'html.script': { enabled: self.getConfigurationSetting('html.script') === "Yes" ? true : false },
-				'html.style': { enabled: self.getConfigurationSetting('html.style') === "Yes" ? true : false },
-				'html.idAttribute': { enabled: self.getConfigurationSetting('html.idAttribute') === "Yes" ? true : false },
-				'html.comment': { enabled: self.getConfigurationSetting('html.comment') == "Yes" ? true : false },
+				'html.head': { enabled: application.getConfigurationSetting('html.head') === "Yes" ? true : false },
+				'html.body': { enabled: application.getConfigurationSetting('html.body') === "Yes" ? true : false },
+				'html.div': { enabled: application.getConfigurationSetting('html.div') === "Yes" ? true : false },
+				'html.section': { enabled: application.getConfigurationSetting('html.section') === "Yes" ? true : false },
+				'html.ul': { enabled: application.getConfigurationSetting('html.ul') === "Yes" ? true : false },
+				'html.select': { enabled: application.getConfigurationSetting('html.select') === "Yes" ? true : false },
+				'html.button': { enabled: application.getConfigurationSetting('html.button') === "Yes" ? true : false },
+				'html.table': { enabled: application.getConfigurationSetting('html.table') === "Yes" ? true : false },
+				'html.tableTbody': { enabled: application.getConfigurationSetting('html.tableTbody') === "Yes" ? true : false },
+				'html.tableThead': { enabled: application.getConfigurationSetting('html.tableThead') === "Yes" ? true : false },
+				'html.tableTfoot': { enabled: application.getConfigurationSetting('html.tableTfoot') === "Yes" ? true : false },
+				'html.tableTr': { enabled: application.getConfigurationSetting('html.tableTr') === "Yes" ? true : false },
+				'html.tableTd': { enabled: application.getConfigurationSetting('html.tableTd') === "Yes" ? true : false },
+				'html.script': { enabled: application.getConfigurationSetting('html.script') === "Yes" ? true : false },
+				'html.style': { enabled: application.getConfigurationSetting('html.style') === "Yes" ? true : false },
+				'html.idAttribute': { enabled: application.getConfigurationSetting('html.idAttribute') === "Yes" ? true : false },
+				'html.comment': { enabled: application.getConfigurationSetting('html.comment') == "Yes" ? true : false },
 			};
 		}
 		return cache.foldTypes;
@@ -1170,7 +1151,7 @@ var FoldTypes = function (application) {
 
 	//actions
 	function fallback(command) {
-		if (self.isValidDocType() == false) {
+		if (application.documentIsValidType() == false) {
 			vscode.window.showInformationMessage("FoldTypes: Not a valid file type. Using default " + command);
 			application.executeCommand(command);
 			return true;
@@ -1187,7 +1168,7 @@ var FoldTypes = function (application) {
 		var cursorPosition = application.editorCursorPosition();
 		var parentLineNumber = getParentTopLineNumber(true); //get first foldable parent
 		var lines = getDocumentLines();
-
+		
 		await unFold(lines); //need to reset all lines to open first
 		let linesToFold = await fold(lines);
 
@@ -1277,7 +1258,11 @@ var FoldTypes = function (application) {
 }
 
 function activate(context) {
+
 	var application = new Application(context);
+	application.setValidDocTypes(validDocTypes);
+	application.setExtensionName('fold-types');
+
 	var foldTypes = new FoldTypes(application);
 	application.registerCommand('fold-types.fold-all', async function () {
 		await foldTypes.foldAll();
