@@ -627,11 +627,6 @@
 			}
 		]
 	},
-	"scripts": {
-		"lint": "eslint .",
-		"pretest": "npm run lint",
-		"test": "node ./test/runTest.js"
-	},
 	"devDependencies": {
 		"eslint": "^5.3.0",
 		"eslint-config-airbnb-base": "^13.1.0",
