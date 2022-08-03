@@ -1,9 +1,9 @@
 const vscode = require('vscode');
-const Application = require('./lib/application');
+const app = require('./lib/application');
+const Application = app.Application;
+const ConfigSettings = app.ConfigSettings;
 
 require('./lib/functions')();
-
-var validDocTypes = ['js', 'jsx', 'ts', 'tsx', 'php', 'css', 'html', 'htm']
 
 /**
  * @param {Application} application
@@ -141,127 +141,131 @@ var FoldTypes = function (application) {
 	let elementFoldTypes = ['head', 'body', 'div', 'ul', 'a', 'select', 'button', 'script', 'style', 'table', 'tbody', 'thead', 'tfoot', 'tfoot', 'tfoot', 'tr', 'td', 'th'];
 	let elementVoids = ['area', 'base', 'br', 'col', 'command', 'embed', 'hr', 'img', 'input', 'keygen', 'link', 'meta', 'param', 'path', 'source', 'track', 'wbr'];
 
+	let extSettings = new ConfigSettings('fold-types');
+
 	function getDocumentLines() {
 
-		if (isset(cache.documentLines)) {
-			return cache.documentLines;
-		}
+		if (isset(cache.documentLines) == false) {
 
-		cache.documentLines = application.getDocumentLinesInfo();
+			cache.documentLines = application.getDocumentLinesInfo();
 
-		var open_bracket = new RegExp('\\{', 'g');
-		var close_bracket = new RegExp('\\}', 'g');
+			var open_bracket = new RegExp('\\{', 'g');
+			var close_bracket = new RegExp('\\}', 'g');
 
-		var hasJs = false;
-		for (var i in cache.documentLines) {
+			var hasJs = false;
+			for (var i in cache.documentLines) {
 
-			let line_x = parseInt(i);
+				let line_x = parseInt(i);
 
-			cache.documentLines[line_x]['isFoldType'] = false;
-			cache.documentLines[line_x]['isFoldEnabled'] = false;
+				cache.documentLines[line_x]['isFoldType'] = false;
+				cache.documentLines[line_x]['isFoldEnabled'] = false;
 
-			var syntax = cache.documentLines[line_x]['syntax'];
+				var syntax = cache.documentLines[line_x]['syntax'];
 
-			if (syntax == "js") {
-				hasJs = true;
-				cacheDocumentJsLine(line_x);
-				continue;
+				if (syntax == "js") {
+					hasJs = true;
+					cacheDocumentJsLine(line_x);
+					continue;
+				}
+
+				if (syntax == "php") {
+					cacheDocumentPhpLine(line_x);
+					continue;
+				}
+
+				if (syntax == "css") {
+					cacheDocumentCssLine(line_x);
+					continue;
+				}
+
+				if (syntax == "html") {
+					cacheDocumentHtmlLine(line_x);
+					continue;
+				}
+
 			}
 
-			if (syntax == "php") {
-				cacheDocumentPhpLine(line_x);
-				continue;
-			}
+			var jsCommentFoldEnabled = hasJs && getFoldEnabled("comment", "js");
 
-			if (syntax == "css") {
-				cacheDocumentCssLine(line_x);
-				continue;
-			}
+			if (jsCommentFoldEnabled == true) {
+				//javascript has weird rules that only comments above var and function declarations are foldable
+				var comment_lines = cache.documentLines.filter(function (item) {
+					return item.lineType === "comment" && item.syntax == "js";
+				});
 
-			if (syntax == "html") {
-				cacheDocumentHtmlLine(line_x);
-				continue;
-			}
-
-		}
-
-		var jsCommentFoldEnabled = hasJs && getFoldEnabled("comment", "js");
-
-		if (jsCommentFoldEnabled == true) {
-			//javascript has weird rules that only comments above var and function declarations are foldable
-			var comment_lines = cache.documentLines.filter(function (item) {
-				return item.lineType === "comment" && item.syntax == "js";
-			});
-
-			for (var i in comment_lines) {
-				var index = parseInt(comment_lines[i]['line']);
-				var line_x = index + 1;
-				var valid = false;
-				while (line_x < cache.documentLines.length) {
-					var line = cache.documentLines[line_x];
-					if (line['textFormatted'].indexOf(" var ") > -1 || line['textFormatted'].indexOf(" function ") > -1 || line['textFormatted'].indexOf(" class ") > -1) {
-						valid = true;
+				for (var i in comment_lines) {
+					var index = parseInt(comment_lines[i]['line']);
+					var line_x = index + 1;
+					var valid = false;
+					while (line_x < cache.documentLines.length) {
+						var line = cache.documentLines[line_x];
+						if (line['textFormatted'].indexOf(" var ") > -1 || line['textFormatted'].indexOf(" function ") > -1 || line['textFormatted'].indexOf(" class ") > -1) {
+							valid = true;
+						}
+						if (in_array(line['lineType'], ["", "comment"])) {
+							line_x++;
+							continue;
+						}
+						break;
 					}
-					if (in_array(line['lineType'], ["", "comment"])) {
+					if (valid == false) {
+						cache.documentLines[index]['lineType'] = "";
+					}
+					setFoldInfo(index);
+				}
+
+			}
+
+			var jsSwitchCaseFoldEnabled = getFoldEnabled("switchCase", "js");
+			var phpSwitchCaseFoldEnabled = getFoldEnabled("switchCase", "php");
+
+			if (jsSwitchCaseFoldEnabled || phpSwitchCaseFoldEnabled) {
+				//fix switchCase and switchCaseInvalid
+				var switch_lines = cache.documentLines.filter(function (item) {
+					return item.lineType === "switch" && ((item.syntax == 'js' && jsSwitchCaseFoldEnabled) || (item.syntax == 'php' && phpSwitchCaseFoldEnabled));
+				});
+
+				for (var i in switch_lines) {
+					var line_x = parseInt(switch_lines[i]['line']);
+					var next_line = cache.documentLines[line_x]['textFormatted'];
+					var switchBracketCount = (next_line.match(open_bracket) || []).length
+					while (switchBracketCount > 0) {
+
 						line_x++;
-						continue;
-					}
-					break;
-				}
-				if (valid == false) {
-					cache.documentLines[index]['lineType'] = "";
-				}
-				setFoldInfo(index);
-			}
+						next_line = cache.documentLines[line_x]['textFormatted'];
+						switchBracketCount += (next_line.match(open_bracket) || []).length
+						switchBracketCount -= (next_line.match(close_bracket) || []).length
+						var isCase = next_line.indexOf(" case ") > -1;
+						var isDefault = next_line.indexOf(" default ") > -1;
+						if (isCase || isDefault) {
 
-		}
-
-		var jsSwitchCaseFoldEnabled = getFoldEnabled("switchCase", "js");
-		var phpSwitchCaseFoldEnabled = getFoldEnabled("switchCase", "php");
-
-		if (jsSwitchCaseFoldEnabled || phpSwitchCaseFoldEnabled) {
-			//fix switchCase and switchCaseInvalid
-			var switch_lines = cache.documentLines.filter(function (item) {
-				return item.lineType === "switch" && ((item.syntax == 'js' && jsSwitchCaseFoldEnabled) || (item.syntax == 'php' && phpSwitchCaseFoldEnabled));
-			});
-
-			for (var i in switch_lines) {
-				var line_x = parseInt(switch_lines[i]['line']);
-				var next_line = cache.documentLines[line_x]['textFormatted'];
-				var switchBracketCount = (next_line.match(open_bracket) || []).length
-				while (switchBracketCount > 0) {
-
-					line_x++;
-					next_line = cache.documentLines[line_x]['textFormatted'];
-					switchBracketCount += (next_line.match(open_bracket) || []).length
-					switchBracketCount -= (next_line.match(close_bracket) || []).length
-					var isCase = next_line.indexOf(" case ") > -1;
-					var isDefault = next_line.indexOf(" default ") > -1;
-					if (isCase || isDefault) {
-
-						var code_data = new RegExp('[^\\{\\}: ~]', 'g');
-						//found case with no brackets
-						var x = line_x + 1;
-						next_line = cache.documentLines[x]['textFormatted'];
-						var hasData = false; //default behavior requires data to fold
-						var b = switchBracketCount;
-						while (b > 0 && next_line.indexOf(" case ") == -1 && next_line.indexOf(" default ") == -1 && hasData == false) {
+							var code_data = new RegExp('[^\\{\\}: ~]', 'g');
+							//found case with no brackets
+							var x = line_x + 1;
 							next_line = cache.documentLines[x]['textFormatted'];
-							//data required
-							hasData = hasData || (next_line.match(code_data) || []).length > 0;
-							b += (next_line.match(open_bracket) || []).length
-							b -= (next_line.match(close_bracket) || []).length
-							x++;
-						}
-						if (x - line_x > 1) {
-							cache.documentLines[line_x]['lineType'] = isCase ? "switchCase" : "switchDefault";
-						}
-						setFoldInfo(line_x);
+							var hasData = false; //default behavior requires data to fold
+							var b = switchBracketCount;
+							while (b > 0 && next_line.indexOf(" case ") == -1 && next_line.indexOf(" default ") == -1 && hasData == false) {
+								next_line = cache.documentLines[x]['textFormatted'];
+								//data required
+								hasData = hasData || (next_line.match(code_data) || []).length > 0;
+								b += (next_line.match(open_bracket) || []).length
+								b -= (next_line.match(close_bracket) || []).length
+								x++;
+							}
+							if (x - line_x > 1) {
+								cache.documentLines[line_x]['lineType'] = isCase ? "switchCase" : "switchDefault";
+							}
+							setFoldInfo(line_x);
 
+						}
 					}
 				}
 			}
+
 		}
+
+		//console.log(cache.documentLines);
 
 		return cache.documentLines;
 	}
@@ -596,7 +600,7 @@ var FoldTypes = function (application) {
 						}
 						char_x++;
 					}
-					
+
 					if (startLineCount) {
 						lineCount++;
 					}
@@ -1049,63 +1053,63 @@ var FoldTypes = function (application) {
 		if (isset(cache.foldTypes) == false) {
 			cache.foldTypes = {
 				//javascript overrides
-				'js.class': { enabled: application.getConfigurationSetting('js.class') == "Yes" ? true : false },
-				'js.interface': { enabled: application.getConfigurationSetting('js.interface') == "Yes" ? true : false },
-				'js.method': { enabled: application.getConfigurationSetting('js.method') == "Yes" ? true : false },
-				'js.object': { enabled: application.getConfigurationSetting('js.object') == "Yes" ? true : false },
-				'js.objectFunctionParam': { enabled: application.getConfigurationSetting('js.objectFunctionParam') == "Yes" ? true : false },
-				'js.objectObjectParam': { enabled: application.getConfigurationSetting('js.objectObjectParam') == "Yes" ? true : false },
-				'js.array': { enabled: application.getConfigurationSetting('js.array') == "Yes" ? true : false },
-				'js.arrayParam': { enabled: application.getConfigurationSetting('js.arrayParam') == "Yes" ? true : false },
-				'js.while': { enabled: application.getConfigurationSetting('js.while') == "Yes" ? true : false },
-				'js.for': { enabled: application.getConfigurationSetting('js.for') == "Yes" ? true : false },
-				'js.if': { enabled: application.getConfigurationSetting('js.if') == "Yes" ? true : false },
-				'js.else': { enabled: application.getConfigurationSetting('js.else') == "Yes" ? true : false },
-				'js.switch': { enabled: application.getConfigurationSetting('js.switch') == "Yes" ? true : false },
-				'js.switchCase': { enabled: application.getConfigurationSetting('js.switchCase') == "Yes" ? true : false },
-				'js.switchDefault': { enabled: application.getConfigurationSetting('js.switchDefault') == "Yes" ? true : false },
-				'js.try': { enabled: application.getConfigurationSetting('js.try') == "Yes" ? true : false },
-				'js.tryCatch': { enabled: application.getConfigurationSetting('js.tryCatch') == "Yes" ? true : false },
-				'js.tryFinally': { enabled: application.getConfigurationSetting('js.tryFinally') == "Yes" ? true : false },
-				'js.comment': { enabled: application.getConfigurationSetting('js.comment') == "Yes" ? true : false },
+				'js.class': { enabled: extSettings.getValue('js.class') == "Yes" ? true : false },
+				'js.interface': { enabled: extSettings.getValue('js.interface') == "Yes" ? true : false },
+				'js.method': { enabled: extSettings.getValue('js.method') == "Yes" ? true : false },
+				'js.object': { enabled: extSettings.getValue('js.object') == "Yes" ? true : false },
+				'js.objectFunctionParam': { enabled: extSettings.getValue('js.objectFunctionParam') == "Yes" ? true : false },
+				'js.objectObjectParam': { enabled: extSettings.getValue('js.objectObjectParam') == "Yes" ? true : false },
+				'js.array': { enabled: extSettings.getValue('js.array') == "Yes" ? true : false },
+				'js.arrayParam': { enabled: extSettings.getValue('js.arrayParam') == "Yes" ? true : false },
+				'js.while': { enabled: extSettings.getValue('js.while') == "Yes" ? true : false },
+				'js.for': { enabled: extSettings.getValue('js.for') == "Yes" ? true : false },
+				'js.if': { enabled: extSettings.getValue('js.if') == "Yes" ? true : false },
+				'js.else': { enabled: extSettings.getValue('js.else') == "Yes" ? true : false },
+				'js.switch': { enabled: extSettings.getValue('js.switch') == "Yes" ? true : false },
+				'js.switchCase': { enabled: extSettings.getValue('js.switchCase') == "Yes" ? true : false },
+				'js.switchDefault': { enabled: extSettings.getValue('js.switchDefault') == "Yes" ? true : false },
+				'js.try': { enabled: extSettings.getValue('js.try') == "Yes" ? true : false },
+				'js.tryCatch': { enabled: extSettings.getValue('js.tryCatch') == "Yes" ? true : false },
+				'js.tryFinally': { enabled: extSettings.getValue('js.tryFinally') == "Yes" ? true : false },
+				'js.comment': { enabled: extSettings.getValue('js.comment') == "Yes" ? true : false },
 				//php
-				'php.class': { enabled: application.getConfigurationSetting('php.class') == "Yes" ? true : false },
-				'php.interface': { enabled: application.getConfigurationSetting('php.interface') == "Yes" ? true : false },
-				'php.method': { enabled: application.getConfigurationSetting('php.method') == "Yes" ? true : false },
-				'php.array': { enabled: application.getConfigurationSetting('php.array') == "Yes" ? true : false },
-				'php.arrayFunctionParam': { enabled: application.getConfigurationSetting('php.arrayFunctionParam') == "Yes" ? true : false },
-				'php.arrayObjectParam': { enabled: application.getConfigurationSetting('php.arrayObjectParam') == "Yes" ? true : false },
-				'php.while': { enabled: application.getConfigurationSetting('php.while') == "Yes" ? true : false },
-				'php.for': { enabled: application.getConfigurationSetting('php.for') == "Yes" ? true : false },
-				'php.if': { enabled: application.getConfigurationSetting('php.if') == "Yes" ? true : false },
-				'php.else': { enabled: application.getConfigurationSetting('php.else') == "Yes" ? true : false },
-				'php.switch': { enabled: application.getConfigurationSetting('php.switch') == "Yes" ? true : false },
-				'php.switchCase': { enabled: application.getConfigurationSetting('php.switchCase') == "Yes" ? true : false },
-				'php.switchDefault': { enabled: application.getConfigurationSetting('php.switchDefault') == "Yes" ? true : false },
-				'php.try': { enabled: application.getConfigurationSetting('php.try') == "Yes" ? true : false },
-				'php.tryCatch': { enabled: application.getConfigurationSetting('php.tryCatch') == "Yes" ? true : false },
-				'php.tryFinally': { enabled: application.getConfigurationSetting('php.tryFinally') == "Yes" ? true : false },
-				'php.comment': { enabled: application.getConfigurationSetting('php.comment') == "Yes" ? true : false },
+				'php.class': { enabled: extSettings.getValue('php.class') == "Yes" ? true : false },
+				'php.interface': { enabled: extSettings.getValue('php.interface') == "Yes" ? true : false },
+				'php.method': { enabled: extSettings.getValue('php.method') == "Yes" ? true : false },
+				'php.array': { enabled: extSettings.getValue('php.array') == "Yes" ? true : false },
+				'php.arrayFunctionParam': { enabled: extSettings.getValue('php.arrayFunctionParam') == "Yes" ? true : false },
+				'php.arrayObjectParam': { enabled: extSettings.getValue('php.arrayObjectParam') == "Yes" ? true : false },
+				'php.while': { enabled: extSettings.getValue('php.while') == "Yes" ? true : false },
+				'php.for': { enabled: extSettings.getValue('php.for') == "Yes" ? true : false },
+				'php.if': { enabled: extSettings.getValue('php.if') == "Yes" ? true : false },
+				'php.else': { enabled: extSettings.getValue('php.else') == "Yes" ? true : false },
+				'php.switch': { enabled: extSettings.getValue('php.switch') == "Yes" ? true : false },
+				'php.switchCase': { enabled: extSettings.getValue('php.switchCase') == "Yes" ? true : false },
+				'php.switchDefault': { enabled: extSettings.getValue('php.switchDefault') == "Yes" ? true : false },
+				'php.try': { enabled: extSettings.getValue('php.try') == "Yes" ? true : false },
+				'php.tryCatch': { enabled: extSettings.getValue('php.tryCatch') == "Yes" ? true : false },
+				'php.tryFinally': { enabled: extSettings.getValue('php.tryFinally') == "Yes" ? true : false },
+				'php.comment': { enabled: extSettings.getValue('php.comment') == "Yes" ? true : false },
 				//css
-				'css.block': { enabled: application.getConfigurationSetting('css.block') === "Yes" ? true : false },
+				'css.block': { enabled: extSettings.getValue('css.block') === "Yes" ? true : false },
 				//HTML
-				'html.head': { enabled: application.getConfigurationSetting('html.head') === "Yes" ? true : false },
-				'html.body': { enabled: application.getConfigurationSetting('html.body') === "Yes" ? true : false },
-				'html.div': { enabled: application.getConfigurationSetting('html.div') === "Yes" ? true : false },
-				'html.section': { enabled: application.getConfigurationSetting('html.section') === "Yes" ? true : false },
-				'html.ul': { enabled: application.getConfigurationSetting('html.ul') === "Yes" ? true : false },
-				'html.select': { enabled: application.getConfigurationSetting('html.select') === "Yes" ? true : false },
-				'html.button': { enabled: application.getConfigurationSetting('html.button') === "Yes" ? true : false },
-				'html.table': { enabled: application.getConfigurationSetting('html.table') === "Yes" ? true : false },
-				'html.tableTbody': { enabled: application.getConfigurationSetting('html.tableTbody') === "Yes" ? true : false },
-				'html.tableThead': { enabled: application.getConfigurationSetting('html.tableThead') === "Yes" ? true : false },
-				'html.tableTfoot': { enabled: application.getConfigurationSetting('html.tableTfoot') === "Yes" ? true : false },
-				'html.tableTr': { enabled: application.getConfigurationSetting('html.tableTr') === "Yes" ? true : false },
-				'html.tableTd': { enabled: application.getConfigurationSetting('html.tableTd') === "Yes" ? true : false },
-				'html.script': { enabled: application.getConfigurationSetting('html.script') === "Yes" ? true : false },
-				'html.style': { enabled: application.getConfigurationSetting('html.style') === "Yes" ? true : false },
-				'html.idAttribute': { enabled: application.getConfigurationSetting('html.idAttribute') === "Yes" ? true : false },
-				'html.comment': { enabled: application.getConfigurationSetting('html.comment') == "Yes" ? true : false },
+				'html.head': { enabled: extSettings.getValue('html.head') === "Yes" ? true : false },
+				'html.body': { enabled: extSettings.getValue('html.body') === "Yes" ? true : false },
+				'html.div': { enabled: extSettings.getValue('html.div') === "Yes" ? true : false },
+				'html.section': { enabled: extSettings.getValue('html.section') === "Yes" ? true : false },
+				'html.ul': { enabled: extSettings.getValue('html.ul') === "Yes" ? true : false },
+				'html.select': { enabled: extSettings.getValue('html.select') === "Yes" ? true : false },
+				'html.button': { enabled: extSettings.getValue('html.button') === "Yes" ? true : false },
+				'html.table': { enabled: extSettings.getValue('html.table') === "Yes" ? true : false },
+				'html.tableTbody': { enabled: extSettings.getValue('html.tableTbody') === "Yes" ? true : false },
+				'html.tableThead': { enabled: extSettings.getValue('html.tableThead') === "Yes" ? true : false },
+				'html.tableTfoot': { enabled: extSettings.getValue('html.tableTfoot') === "Yes" ? true : false },
+				'html.tableTr': { enabled: extSettings.getValue('html.tableTr') === "Yes" ? true : false },
+				'html.tableTd': { enabled: extSettings.getValue('html.tableTd') === "Yes" ? true : false },
+				'html.script': { enabled: extSettings.getValue('html.script') === "Yes" ? true : false },
+				'html.style': { enabled: extSettings.getValue('html.style') === "Yes" ? true : false },
+				'html.idAttribute': { enabled: extSettings.getValue('html.idAttribute') === "Yes" ? true : false },
+				'html.comment': { enabled: extSettings.getValue('html.comment') == "Yes" ? true : false },
 			};
 		}
 		return cache.foldTypes;
@@ -1168,7 +1172,7 @@ var FoldTypes = function (application) {
 		var cursorPosition = application.editorCursorPosition();
 		var parentLineNumber = getParentTopLineNumber(true); //get first foldable parent
 		var lines = getDocumentLines();
-		
+
 		await unFold(lines); //need to reset all lines to open first
 		let linesToFold = await fold(lines);
 
@@ -1229,6 +1233,7 @@ var FoldTypes = function (application) {
 
 		var cursorPosition = application.editorCursorPosition();
 		var lines = getParentChildrenLines();
+
 		await unFold(lines); //need to reset all lines to open first
 		await fold(lines);
 		application.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
@@ -1260,8 +1265,8 @@ var FoldTypes = function (application) {
 function activate(context) {
 
 	var application = new Application(context);
-	application.setValidDocTypes(validDocTypes);
-	application.setExtensionName('fold-types');
+	application.setValidDocTypes(['js', 'jsx', 'ts', 'tsx', 'php', 'css', 'html', 'htm']);
+	application.setDocumentCacheEnabled();
 
 	var foldTypes = new FoldTypes(application);
 	application.registerCommand('fold-types.fold-all', async function () {

@@ -130,6 +130,7 @@ Only the most common tags have been included but if there are some that the comm
 ### CSS
 
 - fold-types.css.block <mark>(default enabled)</mark>
+- fold-types.css.comment 
 
 ### How to configure settings
 The easiest way to configure enabled types is to right click on the extension in your extensions list and select "Extension Settings".
