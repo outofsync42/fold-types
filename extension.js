@@ -1,14 +1,8 @@
 const vscode = require('vscode');
-const app = require('./lib/application');
-const Application = app.Application;
-const ConfigSettings = app.ConfigSettings;
+const custom = require('./lib/custom.js');
+const app = new custom.Application();
 
-require('./lib/functions')();
-
-/**
- * @param {Application} application
- */
-var FoldTypes = function (application) {
+var FoldTypes = function () {
 
 	var self = this;
 
@@ -36,7 +30,8 @@ var FoldTypes = function (application) {
 		}
 
 		var lines = getDocumentLines();
-		var cursorPosition = application.editorCursorPosition();
+		
+		var cursorPosition = app.editorCursorPosition();
 		if (cursorPosition === null) {
 			return 0;
 		}
@@ -90,7 +85,7 @@ var FoldTypes = function (application) {
 		}
 
 		var lines = getDocumentLines();
-		var cursorPosition = application.editorCursorPosition();
+		var cursorPosition = app.editorCursorPosition();
 		if (cursorPosition === null) {
 			return lines.length - 1;
 		}
@@ -141,13 +136,13 @@ var FoldTypes = function (application) {
 	let elementFoldTypes = ['head', 'body', 'div', 'ul', 'a', 'select', 'button', 'script', 'style', 'table', 'tbody', 'thead', 'tfoot', 'tfoot', 'tfoot', 'tr', 'td', 'th'];
 	let elementVoids = ['area', 'base', 'br', 'col', 'command', 'embed', 'hr', 'img', 'input', 'keygen', 'link', 'meta', 'param', 'path', 'source', 'track', 'wbr'];
 
-	let extSettings = new ConfigSettings('fold-types');
+	let extSettings = new custom.ConfigSettings('fold-types');
 
 	function getDocumentLines() {
 
 		if (isset(cache.documentLines) == false) {
 
-			cache.documentLines = application.getDocumentLinesInfo();
+			cache.documentLines = app.getDocumentLinesInfo();
 
 			var open_bracket = new RegExp('\\{', 'g');
 			var close_bracket = new RegExp('\\}', 'g');
@@ -264,8 +259,6 @@ var FoldTypes = function (application) {
 			}
 
 		}
-
-		//console.log(cache.documentLines);
 
 		return cache.documentLines;
 	}
@@ -1142,22 +1135,22 @@ var FoldTypes = function (application) {
 		var linesToFold = getLinesToFold(lines, isFoldType);
 		var lineNumbers = array_column(linesToFold, 'line');
 		if (lineNumbers.length > 0) {
-			await application.editorFoldLines(lineNumbers);
+			await app.editorFoldLines(lineNumbers);
 		}
 		return linesToFold;
 	}
 	async function unFold(lines) {
 		var lineNumbers = array_column(lines, 'line');
 		if (lineNumbers.length > 0) {
-			await application.editorUnFoldLines(lineNumbers);
+			await app.editorUnFoldLines(lineNumbers);
 		}
 	}
 
 	//actions
 	function fallback(command) {
-		if (application.documentIsValidType() == false) {
+		if (app.documentIsValidType() == false) {
 			vscode.window.showInformationMessage("FoldTypes: Not a valid file type. Using default " + command);
-			application.executeCommand(command);
+			app.executeCommand(command);
 			return true;
 		}
 		return false;
@@ -1169,7 +1162,7 @@ var FoldTypes = function (application) {
 
 		cache = {};
 
-		var cursorPosition = application.editorCursorPosition();
+		var cursorPosition = app.editorCursorPosition();
 		var parentLineNumber = getParentTopLineNumber(true); //get first foldable parent
 		var lines = getDocumentLines();
 
@@ -1199,9 +1192,9 @@ var FoldTypes = function (application) {
 		}
 
 		if (parentLineNumber == -1 || lineNumber == -1) {
-			application.editorSetCursorPosition(cursorPosition.line); //put cursor back to original position
+			app.editorSetCursorPosition(cursorPosition.line); //put cursor back to original position
 		} else {
-			application.editorSetCursorPosition(lineNumber); //place cursor at start of tabLevel 0 parent
+			app.editorSetCursorPosition(lineNumber); //place cursor at start of tabLevel 0 parent
 		}
 	}
 	this.foldParent = async function () {
@@ -1211,7 +1204,7 @@ var FoldTypes = function (application) {
 		cache = {};
 
 		let parentLineNumber = getParentTopLineNumber(); //get first fold type
-		var cursorPosition = application.editorCursorPosition();
+		var cursorPosition = app.editorCursorPosition();
 		var lines = getParentLines();
 		var firstIndex = Object.keys(lines)[0];
 
@@ -1220,9 +1213,9 @@ var FoldTypes = function (application) {
 		await fold(lines);
 
 		if (parentLineNumber == -1 || lines[firstIndex]['isFoldEnabled'] == false) {
-			application.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
+			app.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
 		} else {
-			application.editorSetCursorPosition(parentLineNumber); //place cursor at start of parent
+			app.editorSetCursorPosition(parentLineNumber); //place cursor at start of parent
 		}
 	}
 	this.foldChildren = async function () {
@@ -1231,12 +1224,12 @@ var FoldTypes = function (application) {
 		}
 		cache = {};
 
-		var cursorPosition = application.editorCursorPosition();
+		var cursorPosition = app.editorCursorPosition();
 		var lines = getParentChildrenLines();
 
 		await unFold(lines); //need to reset all lines to open first
 		await fold(lines);
-		application.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
+		app.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
 	}
 	this.foldChildrenAllTypes = async function () {
 		if (fallback('editor.foldLevel1')) {
@@ -1244,47 +1237,55 @@ var FoldTypes = function (application) {
 		}
 		cache = {};
 
-		var cursorPosition = application.editorCursorPosition();
+		var cursorPosition = app.editorCursorPosition();
 		var lines = getParentChildrenLines();
 		await unFold(lines); //need to reset all lines to open first
 		await fold(lines, true);
-		application.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
+		app.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
 	}
 	this.unFoldParent = async function () {
 		if (fallback('editor.unfold')) {
 			return;
 		}
 		cache = {};
-		var cursorPosition = application.editorCursorPosition();
+		var cursorPosition = app.editorCursorPosition();
 		await unFold(getParentLines());
-		application.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
+		app.editorSetCursorPosition(cursorPosition.line, cursorPosition.character); //put cursor back to original position
 	}
 
 }
 
 function activate(context) {
 
-	var application = new Application(context);
-	application.setValidDocTypes(['js', 'jsx', 'ts', 'tsx', 'php', 'css', 'html', 'htm']);
-	application.setDocumentCacheEnabled();
+	//INIT APP
+	app.setContext(context);
+	app.setValidDocTypes(['js', 'jsx', 'ts', 'tsx', 'php', 'css', 'html', 'htm']);
+	app.setDocumentCacheEnabled({
+		lineCount:2000 //caching only needed for optimal results on files with more than 2000 lines
+	});
 
-	var foldTypes = new FoldTypes(application);
-	application.registerCommand('fold-types.fold-all', async function () {
+	//INIT EXTENSION
+	var foldTypes = new FoldTypes();
+
+	//REGISTER COMMANDS
+	app.registerCommand('fold-types.fold-all', async function () {
 		await foldTypes.foldAll();
 	});
-	application.registerCommand('fold-types.fold-parent', async function () {
+	app.registerCommand('fold-types.fold-parent', async function () {
 		await foldTypes.foldParent();
 	});
-	application.registerCommand('fold-types.fold-children', async function () {
+	app.registerCommand('fold-types.fold-children', async function () {
 		await foldTypes.foldChildren();
 	});
-	application.registerCommand('fold-types.fold-children-all-types', async function () {
+	app.registerCommand('fold-types.fold-children-all-types', async function () {
 		await foldTypes.foldChildrenAllTypes();
 	});
-	application.registerCommand('fold-types.unfold-parent', async function () {
+	app.registerCommand('fold-types.unfold-parent', async function () {
 		await foldTypes.unFoldParent();
 	});
-	application.activate();
+
+	//ACTIVATE
+	app.activate();
 }
 
 function deactivate() { }
