@@ -30,7 +30,7 @@ var FoldTypes = function () {
 		}
 
 		var lines = getDocumentLines();
-		
+
 		var cursorPosition = app.editorCursorPosition();
 		if (cursorPosition === null) {
 			return 0;
@@ -155,6 +155,19 @@ var FoldTypes = function () {
 				cache.documentLines[line_x]['isFoldType'] = false;
 				cache.documentLines[line_x]['isFoldEnabled'] = false;
 
+				let line = cache.documentLines[line_x]['textFormatted']
+				line = str_replace("(", " ( ", line); //make sure key words have spaces around them
+				line = str_replace(")", " ) ", line); //make sure key words have spaces around them
+				line = str_replace("{", " { ", line); //make sure key words have spaces around them
+				line = str_replace("}", " } ", line); //make sure key words have spaces around them
+				line = str_replace("[", " [ ", line); //make sure key words have spaces around them
+				line = str_replace("]", " ] ", line); //make sure key words have spaces around them
+				line = str_replace("=", " = ", line); //make sure key words have spaces around them
+				line = str_replace(";", " ; ", line); //make sure key words have spaces around them
+				line = str_replace(":", " : ", line); //make sure key words have spaces around them
+				line = str_replace("!", " ! ", line); //make sure key words have spaces around them
+				cache.documentLines[line_x]['textFormatted'] = line;
+				
 				var syntax = cache.documentLines[line_x]['syntax'];
 
 				if (syntax == "js") {
@@ -1261,7 +1274,7 @@ function activate(context) {
 	app.setContext(context);
 	app.setValidDocTypes(['js', 'jsx', 'ts', 'tsx', 'php', 'css', 'html', 'htm']);
 	app.setDocumentCacheEnabled({
-		lineCount:2000 //caching only needed for optimal results on files with more than 2000 lines
+		lineCount: 2000 //caching only needed for optimal results on files with more than 2000 lines
 	});
 
 	//INIT EXTENSION
