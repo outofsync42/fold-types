@@ -170,7 +170,7 @@ var FoldTypes = function () {
 				
 				var syntax = cache.documentLines[line_x]['syntax'];
 
-				if (syntax == "js") {
+				if (syntax == "js" || syntax == "ts") {
 					hasJs = true;
 					cacheDocumentJsLine(line_x);
 					continue;
@@ -275,10 +275,13 @@ var FoldTypes = function () {
 
 		return cache.documentLines;
 	}
+	/**
+	 * @param {number} line_x 
+	 */
 	function cacheDocumentJsLine(line_x) {
 
 		//application already flags and clears comment start and stops.
-		//only need to check for open chars to know if wellformed comment exists as line
+		//only need to check for open chars to know if well formed comment exists as line
 		//no need to set levels
 		if (cache.documentLines[line_x]['textFormatted'].lastIndexOf('/*') > -1) {
 			cache.documentLines[line_x]['lineType'] = 'comment';
@@ -463,7 +466,8 @@ var FoldTypes = function () {
 				} else if (check_line.indexOf(" else ") > -1) {
 					cache.documentLines[line_xx]['lineType'] = "else";
 					break;
-				} else if (check_line.indexOf(" for ") > -1 || check_line.indexOf(" foreach ") > -1) {
+				} else if (check_line.indexOf(" for ") > -1) {
+				// } else if (check_line.indexOf(" for ") > -1 || check_line.indexOf(" foreach ") > -1) {
 					cache.documentLines[line_xx]['lineType'] = "for";
 					break;
 				} else if (check_line.indexOf(" function ") > -1 || check_line.indexOf(" get ") > -1 || check_line.indexOf(" set ") > -1) {
@@ -500,7 +504,6 @@ var FoldTypes = function () {
 					cache.documentLines[line_xx]['lineType'] = "interface";
 					break;
 				} else if (found_key_line) {
-
 					cache.documentLines[line_xx]['lineType'] = "method"; //default to method
 					break;
 				}
@@ -1163,7 +1166,7 @@ var FoldTypes = function () {
 	function fallback(command) {
 		if (app.documentIsValidType() == false) {
 			vscode.window.showInformationMessage("FoldTypes: Not a valid file type. Using default " + command);
-			app.executeCommand(command);
+			vscode.commands.executeCommand(command);
 			return true;
 		}
 		return false;
