@@ -491,6 +491,9 @@ var FoldTypes = function () {
 				} else if (check_line.indexOf(" class ") > -1) {
 					cache.documentLines[line_xx]['lineType'] = "class";
 					break;
+				} else if (check_line.indexOf(" constructor ") > -1) {
+					cache.documentLines[line_xx]['lineType'] = "constructor";
+					break;
 				} else if (check_line.indexOf(" return ") > -1) {
 					cache.documentLines[line_xx]['lineType'] = "object";
 					break;
@@ -1063,6 +1066,7 @@ var FoldTypes = function () {
 			cache.foldTypes = {
 				//javascript overrides
 				'js.class': { enabled: extSettings.getValue('js.class') == "Yes" ? true : false },
+				'js.constructor': { enabled: extSettings.getValue('js.constructor') == "Yes" ? true : false },
 				'js.interface': { enabled: extSettings.getValue('js.interface') == "Yes" ? true : false },
 				'js.method': { enabled: extSettings.getValue('js.method') == "Yes" ? true : false },
 				'js.object': { enabled: extSettings.getValue('js.object') == "Yes" ? true : false },
