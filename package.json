@@ -58,6 +58,11 @@
 				"command": "fold-types.unfold-parent",
 				"title": "UnFold Types Parent",
 				"when": "editorTextFocus && foldingEnabled"
+			},
+			{
+				"command": "fold-types.fold-all-expand-parent",
+				"title": "Fold Types Then Expand Parent",
+				"when": "editorTextFocus && foldingEnabled"
 			}
 		],
 		"keybindings": [
@@ -84,6 +89,11 @@
 			{
 				"key": "",
 				"command": "fold-types.unfold-parent",
+				"when": "editorTextFocus && foldingEnabled"
+			},
+			{
+				"key": "",
+				"command": "fold-types.fold-all-expand-parent",
 				"when": "editorTextFocus && foldingEnabled"
 			}
 		],

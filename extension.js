@@ -1291,6 +1291,10 @@ function activate(context) {
 	app.registerCommand('fold-types.fold-all', async function () {
 		await foldTypes.foldAll();
 	});
+	app.registerCommand('fold-types.fold-all-expand-parent', async function () {
+		await foldTypes.foldAll();
+		vscode.commands.executeCommand('editor.unfold');
+	});
 	app.registerCommand('fold-types.fold-parent', async function () {
 		await foldTypes.foldParent();
 	});
