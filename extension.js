@@ -1166,6 +1166,15 @@ var FoldTypes = function () {
 		}
 	}
 
+	//IS
+	this.isAutoFoldEnabled = function () {
+		let autoFold = extSettings.getValue('general.autoFoldOnFileOpen', 'No');
+		if(autoFold==='Yes'){
+			return true;
+		}
+		return false;
+	}
+
 	//actions
 	function fallback(command) {
 		if (app.documentIsValidType() == false) {
@@ -1286,6 +1295,13 @@ function activate(context) {
 
 	//INIT EXTENSION
 	var foldTypes = new FoldTypes();
+
+	//EVENTS
+	app.onDocumentOpen(function (document) {
+		if(foldTypes.isAutoFoldEnabled()){
+			foldTypes.foldAll();
+		}
+	})
 
 	//REGISTER COMMANDS
 	app.registerCommand('fold-types.fold-all', async function () {

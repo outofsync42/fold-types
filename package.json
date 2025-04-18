@@ -2,7 +2,7 @@
 	"name": "fold-types",
 	"displayName": "Fold Types",
 	"description": "Fold enabled types (class, methods, etc..) instead of levels",
-	"version": "1.2.2",
+	"version": "1.2.3",
 	"publisher": "outofsync42",
 	"license": "MIT",
 	"repository": {
@@ -98,6 +98,21 @@
 			}
 		],
 		"configuration": [
+			{
+				"type": "object",
+				"title": "General",
+				"properties": {
+					"fold-types.general.autoFoldOnFileOpen": {
+						"type": "string",
+						"enum": [
+							"Yes",
+							"No"
+						],
+						"default": "No",
+						"description": "Auto Fold On File Open"
+					}
+				}
+			},
 			{
 				"type": "object",
 				"title": "Javascript",
@@ -657,6 +672,7 @@
 		"id": "779e87e5-e336-479f-8253-5baceb825976",
 		"publisherDisplayName": "outofsync42",
 		"publisherId": "5b357866-64ca-4aee-92e0-be55ff869996",
-		"isPreReleaseVersion": false
+		"isPreReleaseVersion": false,
+		"size": 27391746
 	}
 }

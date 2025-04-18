@@ -61,6 +61,10 @@ Type "Fold Types" in the command palette to find the commands but its recommende
 
 Fold Types comes configured with a few enabled types that I feel to be the most intuitive items to be folded but almost any type can configured to be folded or ignored based on your needs.
 
+### General
+
+- fold-types.general.autoFoldOnFileOpen (Automatically fold when you open a file. Default:No)
+
 ### JS
 
 - fold-types.js.class	
